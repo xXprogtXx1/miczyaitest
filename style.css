@@ -1,0 +1,770 @@
+body {
+  font-family: 'Roboto', sans-serif;
+  background: linear-gradient(-45deg, #ffd6e0, #d6f0ff, #b3ffec, #f0d6ff);
+  background-size: 400% 400%;
+  animation: gradientBG 20s ease infinite;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  transition: background 0.5s, color 0.5s;
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+body.dark-mode {
+  background: #1e1e1e;
+  color: #f0f0f0;
+}
+
+header {
+  padding: 2rem;
+  background-color: #fff0f5;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+body.dark-mode header {
+  background-color: #2c2c2c;
+}
+
+h1 {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  color: #ff69b4;
+}
+
+p {
+  color: #666;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+#subtitle-wrapper {
+  text-align: center;
+}
+
+#subtitle {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  border-right: 2px solid #ff69b4;
+  animation: blink-caret 0.75s step-end infinite;
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent; }
+  50% { border-color: #ff69b4; }
+}
+
+main {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+#chatForm {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1rem;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+#userInput {
+  padding: 1rem;
+  font-size: 1rem;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  width: 70%;
+  max-width: 400px;
+  box-sizing: border-box;
+}
+
+button {
+  padding: 1rem;
+  font-size: 1rem;
+  border-radius: 10px;
+  border: none;
+  background-color: #87ceeb;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+button:hover {
+  background-color: #00bfff;
+  color: white;
+  box-shadow: 0 0 10px #00bfff;
+}
+
+.chat-controls {
+  margin-top: 1rem;
+}
+
+.clear-btn {
+  font-size: 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.clear-btn:hover {
+  transform: scale(1.2);
+  color: red;
+}
+
+.chat-box {
+  margin: 0 auto;
+  padding: 1.2rem;
+  max-width: 600px;
+  width: 90%;
+  height: 300px;
+  background: #f0f8ff;
+  border-radius: 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chat-box::-webkit-scrollbar {
+  display: none;
+}
+
+body.dark-mode .chat-box {
+  background-color: #2e2e2e;
+  border: 1px solid #555;
+}
+
+.msg-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: 100%;
+}
+
+.msg-wrapper.ai {
+  justify-content: flex-start;
+}
+
+.msg-wrapper.utente {
+  justify-content: flex-end;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.msg {
+  padding: 0.8rem 1.2rem; 
+  border-radius: 20px;
+  max-width: 75%;
+  word-wrap: break-word;
+  line-height: 1.4;
+  position: relative;
+}
+
+.msg.utente {
+  background-color: #87ceeb;
+  color: white;
+}
+
+.msg.ai {
+  background-color: #dedede;
+  color: #000;
+}
+
+body.dark-mode .msg.ai {
+  background-color: #444;
+  color: #eee;
+}
+
+body.dark-mode .msg.utente {
+  background-color: #2196f3;
+  color: white;
+}
+
+
+.loader {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.loader div {
+  width: 8px;
+  height: 8px;
+  background-color: #999;
+  border-radius: 50%;
+  animation: bounce 1s infinite ease-in-out;
+}
+
+.loader div:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loader div:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+.switch {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  background-color: #ccc;
+  border-radius: 24px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  transition: 0.4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.4s;
+}
+
+input:checked + .slider {
+  background-color: #2196f3;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+@media (max-width: 600px) {
+  #chatForm {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #userInput,
+  button {
+    width: 90%;
+    font-size: 0.9rem;
+  }
+
+  button {
+    margin-top: 10px;
+  }
+
+  .chat-box {
+    height: 250px;
+    padding: 0.5rem;
+    z-index: 1;
+  position: relative;
+  }
+
+  .clear-btn {
+    font-size: 1.8rem;
+  }
+}
+
+.msg-meta {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.copy-btn {
+  cursor: pointer;
+  font-size: 1rem;
+  opacity: 0.6;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.copy-btn:hover {
+  opacity: 1;
+}
+
+.copy-btn.clicked {
+  opacity: 0.2;
+  transform: scale(1.1) rotate(10deg);
+}
+
+body.dark-mode .copy-btn {
+  color: inherit;
+}
+
+#language-toggle {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+}
+
+
+body.dark-mode #langBtn {
+  background-color: #555;
+  color: white;
+}
+
+/* Posiziona il pulsante lingua in alto a sinistra dentro header */
+header {
+  position: relative; /* assicurati che ci sia */
+}
+
+#langBtn {
+  padding: 0.4rem 1rem;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  border: none;
+  background-color: #2196f3; /* blu principale */
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+  box-shadow: 0 3px 8px rgba(33, 150, 243, 0.3);
+}
+
+#langBtn:hover {
+  background-color: #1976d2;
+  transform: scale(1.05);
+}
+
+body.dark-mode #langBtn {
+  background-color: #555;
+  color: white;
+}
+
+body.dark-mode #langBtn:hover {
+  background-color: #666;
+}
+
+#langBtn {
+  max-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bubble-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bubble {
+  position: absolute;
+  bottom: -100px;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  animation: floatBubble 20s linear infinite;
+}
+
+.bubble:nth-child(1) {
+  left: 10%;
+  width: 30px;
+  height: 30px;
+  animation-duration: 18s;
+}
+.bubble:nth-child(2) {
+  left: 30%;
+  width: 50px;
+  height: 50px;
+  animation-duration: 22s;
+}
+.bubble:nth-child(3) {
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  animation-duration: 25s;
+}
+.bubble:nth-child(4) {
+  left: 70%;
+  width: 60px;
+  height: 60px;
+  animation-duration: 20s;
+}
+.bubble:nth-child(5) {
+  left: 90%;
+  width: 35px;
+  height: 35px;
+  animation-duration: 23s;
+}
+
+@keyframes floatBubble {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-50vh) scale(1.1);
+  }
+  100% {
+    transform: translateY(-100vh) scale(1);
+    opacity: 0;
+  }
+}
+
+body.dark-mode .bubble {
+  background: rgba(255, 255, 255, 0.25); /* Bianco tenue per dark mode */
+}
+
+body:not(.dark-mode) .bubble {
+  background: rgba(173, 216, 230, 0.4); /* Azzurro chiaro per light mode */
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.msg-wrapper {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+.glitch {
+  animation: glitch 0.5s linear infinite;
+  color: #ff3cac;
+  text-shadow: 1px 1px 0 #0ff, -1px -1px 0 #f0f;
+}
+
+@keyframes glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-1px, 1px); }
+  40% { transform: translate(-1px, -1px); }
+  60% { transform: translate(1px, 1px); }
+  80% { transform: translate(1px, -1px); }
+  100% { transform: translate(0); }
+}
+
+header h1 {
+  user-select: none;
+  display: inline-block;
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  color: #fff;
+  text-shadow:
+    0 0 5px #ff69b4,
+    0 0 10px #ff69b4,
+    0 0 20px #ff69b4,
+    0 0 40px #ff69b4;
+  animation: pulseNeon 2s ease-in-out infinite;
+}
+
+#subtitle {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  border-right: 2px solid #ff69b4;
+  animation: blink-caret 0.75s step-end infinite;
+  margin-top: 0.3rem;
+  max-width: 100%;
+}
+
+@keyframes pulseNeon {
+  0%, 100% {
+    text-shadow:
+      0 0 5px #ff69b4,
+      0 0 10px #ff69b4,
+      0 0 20px #ff69b4,
+      0 0 40px #ff69b4;
+  }
+  50% {
+    text-shadow:
+      0 0 10px #ff69b4,
+      0 0 20px #ff69b4,
+      0 0 40px #ff69b4,
+      0 0 60px #ff69b4;
+  }
+}
+
+.social-fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  /* Necessario per posizionare i social in assoluto rispetto al fab */
+  position: fixed;
+}
+
+.social-fab button {
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.social-fab button:hover {
+  transform: rotate(90deg);
+}
+
+.social-links {
+  position: absolute;      /* Posiziona i social rispetto a .social-fab */
+  bottom: 70px;            /* Sopra il pulsante di circa 70px */
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 0;               /* Tolto margin-bottom per evitare spostamenti */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(20px);  /* Parte spostato sotto e invisibile */
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.social-fab.open .social-links {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);     /* Si sposta su e diventa visibile */
+}
+
+.social-links a {
+  background-color: #ffffff;
+  color: #333;
+  text-decoration: none;
+  font-size: 1.4rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s, background-color 0.3s;
+}
+
+.social-links a:hover {
+  transform: scale(1.2);
+  background-color: #87ceeb;
+}
+
+/* Dark mode compatibilità */
+body.dark-mode .social-links a {
+  background-color: #444;
+  color: #fff;
+}
+
+.social-links a svg {
+  width: 24px;
+  height: 24px;
+}
+
+.social-links a svg {
+  fill: currentColor;
+  color: #333;
+}
+
+body.dark-mode .social-links a svg {
+  color: white;
+}
+
+.email-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.email-copy {
+  background-color: #ffffff;
+  color: #333;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.3s;
+}
+
+.email-copy svg {
+  width: 20px;
+  height: 20px;
+}
+
+.email-copy:hover {
+  transform: scale(1.2);
+  background-color: #87ceeb;
+}
+
+.email-tooltip {
+  position: absolute;
+  right: 110%;
+  background-color: #333;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(10px);
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.email-wrapper:hover .email-tooltip {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+body.dark-mode .email-copy {
+  background-color: #444;
+  color: white;
+}
+
+body.dark-mode .email-tooltip {
+  background-color: #222;
+}
+
+.cookie-button {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 999;
+}
+
+#cookieBtn {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #6b4e16;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  transition: transform 0.3s ease;
+}
+
+#cookieBtn:hover {
+  transform: scale(1.15); 
+}
+
+#cookieBtn svg {
+  width: 40px;
+  height: 40px;
+  margin: 0;
+}
+.cookie-modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  max-width: 90%;
+  width: 400px;
+  text-align: center;
+}
+
+body.dark-mode .cookie-modal {
+  background-color: #333;
+  color: #f0f0f0;
+}
+
+.cookie-modal.show {
+  display: block;
+}
+
+.cookie-content button {
+  margin-top: 1rem;
+  padding: 0.5rem 1.2rem;
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.cookie-content button:hover {
+  background-color: #1976d2;
+}
+
+.cookie-content a {
+  color: #2196f3;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.cookie-content a:hover {
+  color: #1976d2;
+}
+
+/* Nota mostrata se il backend (Render free) impiega a svegliarsi */
+.avvio-msg {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
