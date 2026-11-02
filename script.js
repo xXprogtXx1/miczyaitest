@@ -577,7 +577,9 @@ async function chiediRisposta({ mantieniDomanda = false } = {}) {
     if (!mantieniDomanda) chatHistory.pop();
     salvaCronologiaChat();
 
-    const mostraServer = [400, 401, 403, 404, 429, 503].includes(error.stato) && error.messaggioServer;
+    // Il backend scrive messaggi pensati per essere letti (nessun dato interno): si mostrano sempre
+    const mostraServer = typeof error.messaggioServer === "string" && error.messaggioServer.trim()
+      ? error.messaggioServer.slice(0, 300) : "";
     const testoErrore =
       mostraServer ? error.messaggioServer :
       error.name === "AbortError" ? messaggi[lingua].timeout :
