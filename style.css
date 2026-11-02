@@ -789,8 +789,13 @@ html[lang="en"] main::before {
   background: var(--mint);
 }
 
-.regen-btn {
+.regen-btn,
+.discord-btn {
   margin-left: 0.4rem;
+}
+
+.discord-btn {
+  background: #aab6ff;
 }
 
 @media (hover: none) {
