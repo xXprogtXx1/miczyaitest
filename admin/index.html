@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="color-scheme" content="light dark" />
+  <title>MiczyAI · Pannello admin</title>
+  <link rel="icon" type="image/png" href="../miczy-favicon.png" />
+  <style>
+    :root {
+      --bg: #d9ccff; --win: #fff; --bar: #ffd93d; --ink: #17141f; --muted: #5b5675;
+      --edge: #17141f; --hard: #17141f; --pink: #ff5ca8; --cyan: #3ddcff; --mint: #43e8a0; --field: #fff;
+      --row: #f4f0ff;
+    }
+    body.dark-mode {
+      --bg: #140a33; --win: #1b1040; --bar: #3a1f8a; --ink: #f1ecff; --muted: #b9abe8;
+      --edge: #6ef3ff; --hard: #ff3cac; --field: #1a0f3d; --row: #231552;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 1rem;
+      font-family: "Instrument Sans", system-ui, "Segoe UI", sans-serif;
+      background: var(--bg); color: var(--ink);
+    }
+    .wrap { max-width: 64rem; margin: 0 auto; }
+    .win { border: 3px solid var(--edge); border-radius: 1.1rem; background: var(--win); box-shadow: 6px 6px 0 var(--hard); overflow: hidden; }
+    .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.7rem 1rem; background: var(--bar); border-bottom: 3px solid var(--edge); color: #17141f; }
+    body.dark-mode .bar { color: var(--ink); }
+    .bar h1 { margin: 0; font-size: 1.15rem; }
+    .body { padding: 1rem; }
+    a.btn, button.btn {
+      display: inline-block; padding: 0.4rem 0.9rem; border: 2px solid var(--edge); border-radius: 999px;
+      background: var(--field); color: var(--ink); font: inherit; font-size: 0.85rem; font-weight: 700;
+      text-decoration: none; cursor: pointer; box-shadow: 2px 2px 0 var(--hard);
+    }
+    .btn:hover { background: var(--bar); color: #17141f; }
+    .btn:active { transform: translate(2px, 2px); box-shadow: none; }
+    .btn.rosso { background: var(--pink); color: #17141f; }
+    .btn.verde { background: var(--mint); color: #17141f; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg { margin: 0.5rem 0; padding: 0.7rem 1rem; border: 2px solid var(--edge); border-radius: 0.8rem; background: var(--row); }
+    .msg.err { background: var(--pink); color: #17141f; font-weight: 600; }
+    .cerca { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
+    .cerca input, .form input, .form select, .form textarea {
+      width: 100%; padding: 0.5rem 0.8rem; border: 2px solid var(--edge); border-radius: 0.7rem;
+      background: var(--field); color: var(--ink); font: inherit;
+    }
+    .tabella { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { padding: 0.5rem 0.6rem; text-align: left; vertical-align: top; border-bottom: 2px solid var(--row); }
+    th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
+    td.mail { overflow-wrap: anywhere; font-weight: 600; }
+    .azioni { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .azioni .btn { padding: 0.25rem 0.6rem; font-size: 0.78rem; }
+    .tag { display: inline-block; padding: 0.1rem 0.55rem; border: 2px solid var(--edge); border-radius: 999px; font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
+    .tag.ok { background: var(--mint); color: #17141f; }
+    .tag.ban { background: var(--pink); color: #17141f; }
+    .tag.adm { background: var(--cyan); color: #17141f; }
+    small.sub { display: block; color: var(--muted); font-weight: 400; }
+    .velo { position: fixed; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center; padding: 1rem; background: rgba(15, 8, 36, 0.6); }
+    .velo.show { display: flex; }
+    .scheda { width: min(34rem, 100%); max-height: 90vh; overflow: auto; padding: 1.2rem; border: 3px solid var(--edge); border-radius: 1.1rem; background: var(--win); box-shadow: 6px 6px 0 var(--hard); }
+    .scheda h2 { margin: 0 0 0.6rem; font-size: 1.1rem; overflow-wrap: anywhere; }
+    .form label { display: block; margin: 0.6rem 0 0.2rem; font-size: 0.82rem; font-weight: 700; }
+    .form .riga { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; font-size: 0.9rem; }
+    .form .riga input { width: auto; }
+    .fondo { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .chat-log { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+    .chat-log li { margin-bottom: 0.5rem; padding: 0.5rem 0.7rem; border: 2px solid var(--edge); border-radius: 0.7rem; background: var(--row); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.86rem; }
+    .chat-log li.user { background: #fff3b0; color: #17141f; }
+    .chat-log small { display: block; margin-bottom: 0.2rem; color: var(--muted); font-weight: 700; }
+    .chat-log li.user small { color: #4a4660; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="win">
+      <div class="bar">
+        <h1>🛠️ MiczyAI · Pannello admin</h1>
+        <a class="btn" href="../">← Torna al sito</a>
+      </div>
+      <div class="body">
+        <div id="stato" class="msg">Caricamento…</div>
+
+        <div id="pannello" hidden>
+          <form id="cercaForm" class="cerca">
+            <input id="cerca" type="search" placeholder="Cerca per email…" maxlength="100" aria-label="Cerca per email" />
+            <button class="btn" type="submit">Cerca</button>
+          </form>
+          <div class="tabella">
+            <table>
+              <thead>
+                <tr><th>Utente</th><th>Stato</th><th>Msg 24h</th><th>Totale</th><th>Limite</th><th>Azioni</th></tr>
+              </thead>
+              <tbody id="righe"></tbody>
+            </table>
+          </div>
+          <p id="vuoto" class="msg" hidden>Nessun utente trovato.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Finestre -->
+  <div id="velo" class="velo" role="dialog" aria-modal="true">
+    <div class="scheda" id="scheda"></div>
+  </div>
+
+  <script src="../config.js"></script>
+  <script src="../auth.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
