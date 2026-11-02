@@ -1,1 +1,91 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="color-scheme" content="light dark" />
+  <title>MiczyAI · Email confermata</title>
+  <link rel="icon" type="image/png" href="../miczy-favicon.png" />
+  <style>
+    :root { --bg:#d9ccff; --win:#fff; --bar:#ffd93d; --ink:#17141f; --muted:#5b5675; --edge:#17141f; --hard:#17141f; --pink:#ff5ca8; --mint:#43e8a0; }
+    body.dark-mode { --bg:#140a33; --win:#1b1040; --bar:#3a1f8a; --ink:#f1ecff; --muted:#b9abe8; --edge:#6ef3ff; --hard:#ff3cac; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1rem;
+      font-family:"Instrument Sans", system-ui, "Segoe UI", sans-serif; background:var(--bg); color:var(--ink); }
+    .win { width:min(26rem,100%); border:3px solid var(--edge); border-radius:1.2rem; background:var(--win); box-shadow:7px 7px 0 var(--hard); overflow:hidden; }
+    .bar { padding:.6rem 1rem; background:var(--bar); border-bottom:3px solid var(--edge); font-weight:700; font-size:.85rem; color:#17141f; }
+    body.dark-mode .bar { color:var(--ink); }
+    .corpo { padding:1.6rem 1.4rem 1.8rem; text-align:center; }
+    .icona { font-size:3rem; line-height:1; margin-bottom:.4rem; }
+    h1 { margin:.3rem 0 .6rem; font-size:1.6rem; letter-spacing:-.02em; }
+    p { margin:0 0 1.2rem; color:var(--muted); line-height:1.5; }
+    a.btn { display:inline-block; padding:.7rem 1.6rem; border:3px solid var(--edge); border-radius:999px; background:var(--pink);
+      color:#17141f; font-weight:700; text-decoration:none; box-shadow:3px 3px 0 var(--hard); }
+    a.btn:hover { background:var(--bar); }
+    a.btn:active { transform:translate(3px,3px); box-shadow:none; }
+    .ok .icona::before { content:"🎉"; }
+    .ko .icona::before { content:"😬"; }
+    .attesa .icona::before { content:"⏳"; }
+  </style>
+</head>
+<body>
+  <div class="win">
+    <div class="bar">miczy.exe</div>
+    <div id="corpo" class="corpo attesa">
+      <div class="icona" aria-hidden="true"></div>
+      <h1 id="titolo">Un attimo…</h1>
+      <p id="testo">Sto confermando la tua email.</p>
+      <a id="vai" class="btn" href="../" hidden>Vai alla chat</a>
+    </div>
+  </div>
 
+  <script src="../config.js"></script>
+  <script src="../auth.js"></script>
+  <script>
+    (async function () {
+      const T = {
+        it: {
+          okT: "Email confermata!", okP: "Il tuo account è attivo e sei già dentro. Le tue chat verranno salvate.", vai: "Vai alla chat",
+          koT: "Link non valido", koP: "Il link è scaduto o è già stato usato. Torna al sito e prova ad accedere: se l'email non risulta confermata, registrati di nuovo per ricevere un nuovo link.", torna: "Torna al sito",
+          nessuno: "Questa pagina serve per confermare l'email. Apri il link che trovi nell'email che ti abbiamo mandato.",
+          conf: "L'accesso non è ancora configurato su questo sito."
+        },
+        en: {
+          okT: "Email confirmed!", okP: "Your account is active and you're already logged in. Your chats will be saved.", vai: "Go to the chat",
+          koT: "Invalid link", koP: "The link has expired or was already used. Go back to the site and try to log in: if your email isn't confirmed, sign up again to get a new link.", torna: "Back to the site",
+          nessuno: "This page confirms your email. Open the link in the email we sent you.",
+          conf: "Login isn't set up on this site yet."
+        }
+      };
+      let lang = "it";
+      try {
+        if (localStorage.getItem("lang") === "en") lang = "en";
+        if (localStorage.getItem("darkMode") === "true") document.body.classList.add("dark-mode");
+      } catch (e) { /* ignora */ }
+      document.documentElement.lang = lang;
+      const t = T[lang];
+      const mostra = (classe, titolo, testo, bottone) => {
+        document.getElementById("corpo").className = "corpo " + classe;
+        document.getElementById("titolo").textContent = titolo;
+        document.getElementById("testo").textContent = testo;
+        const vai = document.getElementById("vai");
+        vai.textContent = bottone; vai.hidden = false;
+      };
+
+      if (!MiczyAuth.configurato()) return mostra("ko", t.koT, t.conf, t.torna);
+
+      // Link di recupero password: la nuova password si sceglie sul sito, che legge il link
+      if (/type=recovery/.test(location.hash)) { location.replace("../" + location.hash); return; }
+
+      const haLink = /access_token=|error=|error_code=/.test(location.hash);
+      const ritorno = await MiczyAuth.inizializza();
+
+      if (ritorno && ritorno.errore) return mostra("ko", t.koT, t.koP, t.torna);
+      if (ritorno) return mostra("ok", t.okT, t.okP, t.vai);
+      if (!haLink) return mostra("ko", t.koT, t.nessuno, t.torna);
+      mostra("ko", t.koT, t.koP, t.torna);
+    })();
+  </script>
+</body>
+</html>
