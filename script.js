@@ -130,7 +130,11 @@ const messaggi = {
     avvio: "Sto svegliando il server, può volerci fino a un minuto... ☕",
     conferma: "Sei sicuro di voler cancellare la cronologia?",
     vuoto: "Scrivi qualcosa. Prometto che ci provo.",
-    rigenera: "Rigenera risposta"
+    rigenera: "Rigenera risposta",
+    discord: "Invia domanda e risposta su Discord",
+    discordConferma: "Vuoi inviare questa domanda e la risposta del bot al creatore di MiczyAI su Discord?",
+    discordOk: "Inviato su Discord ✓",
+    discordErrore: "Invio su Discord non riuscito. Riprova tra poco."
   },
   en: {
     mhhh: "hmm...",
@@ -140,13 +144,18 @@ const messaggi = {
     avvio: "Waking up the server, this can take up to a minute... ☕",
     conferma: "Are you sure you want to clear the chat history?",
     vuoto: "Type something. I promise I'll try.",
-    rigenera: "Regenerate response"
+    rigenera: "Regenerate response",
+    discord: "Send question and answer to Discord",
+    discordConferma: "Do you want to send this question and the bot's answer to MiczyAI's creator on Discord?",
+    discordOk: "Sent to Discord ✓",
+    discordErrore: "Sending to Discord failed. Please try again shortly."
   }
 };
 
 const BACKEND_URL =
   ((window.MICZY_CONFIG && window.MICZY_CONFIG.backendUrl) || "https://backend-miczy-ai.onrender.com")
     .replace(/\/$/, "") + "/chat";
+const SHARE_URL = BACKEND_URL.replace(/\/chat$/, "/share");
 const MAX_MESSAGGI_INVIATI = 20;   // ultimi N messaggi mandati al backend
 const MAX_MESSAGGI_SALVATI = 100;  // ultimi N messaggi tenuti in localStorage
 const TIMEOUT_RICHIESTA_MS = 60000;
@@ -272,6 +281,10 @@ function aggiornaLingua(lang) {
 
   if (langBtn) langBtn.textContent = lang === "it" ? "EN" : "IT";
   if (window.Account) window.Account.aggiornaTesti();
+  document.querySelectorAll(".discord-btn").forEach(b => {
+    b.title = messaggi[lang].discord;
+    b.setAttribute("aria-label", messaggi[lang].discord);
+  });
   aggiornaRigenera();
 }
 
@@ -306,6 +319,75 @@ function creaPulsanteCopia(testo) {
   return copyBtn;
 }
 
+// La domanda a cui risponde questo messaggio dell'AI: l'ultimo messaggio utente prima di lui
+function domandaPrecedente(elemento) {
+  let nodo = elemento.closest(".msg-wrapper");
+  while (nodo && (nodo = nodo.previousElementSibling)) {
+    if (nodo.classList.contains("utente")) {
+      const msg = nodo.querySelector(".msg");
+      return msg ? msg.textContent.trim() : "";
+    }
+  }
+  return "";
+}
+
+function avvisa(testo, errore = false) {
+  if (window.Account && window.Account.avviso) window.Account.avviso(testo, errore);
+  else alert(testo);
+}
+
+// Pulsante "Invia su Discord": l'utente sceglie di mandare al creatore domanda e risposta
+function creaPulsanteDiscord(testo) {
+  const btn = document.createElement("span");
+  btn.className = "copy-btn discord-btn";
+  btn.textContent = "➤";
+  btn.title = messaggi[lingua].discord;
+  btn.setAttribute("role", "button");
+  btn.setAttribute("aria-label", messaggi[lingua].discord);
+  btn.tabIndex = 0;
+
+  const invia = async () => {
+    if (btn.dataset.stato === "invio" || btn.dataset.stato === "fatto") return;
+    const domanda = domandaPrecedente(btn);
+    if (!domanda) return;
+    if (!confirm(messaggi[lingua].discordConferma)) return;
+
+    btn.dataset.stato = "invio";
+    btn.textContent = "…";
+    try {
+      const response = await fetch(SHARE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: domanda, answer: testo }),
+        signal: window.AbortSignal && AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined
+      });
+      if (!response.ok) {
+        let motivo = "";
+        try { motivo = (await response.json()).response; } catch (e) { /* senza JSON */ }
+        throw new Error(typeof motivo === "string" ? motivo : "");
+      }
+      btn.dataset.stato = "fatto";
+      btn.textContent = "✔";
+      btn.classList.add("clicked");
+      btn.title = messaggi[lingua].discordOk;
+      avvisa(messaggi[lingua].discordOk);
+    } catch (e) {
+      btn.dataset.stato = "";
+      btn.textContent = "➤";
+      avvisa(e.message || messaggi[lingua].discordErrore, true);
+    }
+  };
+
+  btn.addEventListener("click", invia);
+  btn.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      invia();
+    }
+  });
+  return btn;
+}
+
 function aggiungiMessaggio(testo, mittente, { salva = true } = {}) {
   const wrapper = document.createElement("div");
   wrapper.className = `msg-wrapper ${mittente}`;
@@ -324,7 +406,10 @@ function aggiungiMessaggio(testo, mittente, { salva = true } = {}) {
 
   const bottomRow = document.createElement("div");
   bottomRow.className = "msg-meta";
-  if (mittente === "ai") bottomRow.appendChild(creaPulsanteCopia(testo));
+  if (mittente === "ai") {
+    bottomRow.appendChild(creaPulsanteCopia(testo));
+    bottomRow.appendChild(creaPulsanteDiscord(testo));
+  }
   msg.appendChild(bottomRow);
 
   if (mittente === "utente") {
@@ -386,6 +471,7 @@ function scriviRispostaGraduale(testo) {
   const bottomRow = document.createElement("div");
   bottomRow.className = "msg-meta";
   bottomRow.appendChild(creaPulsanteCopia(testo));
+  bottomRow.appendChild(creaPulsanteDiscord(testo));
 
   wrapper.appendChild(avatar);
   wrapper.appendChild(msg);
@@ -586,7 +672,9 @@ async function chiediRisposta({ mantieniDomanda = false } = {}) {
       error instanceof TypeError ? traduzioni[lingua].erroreChat :
       messaggi[lingua].erroreServer;
 
-    aggiungiMessaggio(testoErrore, "ai", { salva: false }).classList.add("errore");
+    const nodoErrore = aggiungiMessaggio(testoErrore, "ai", { salva: false });
+    nodoErrore.classList.add("errore");
+    nodoErrore.querySelectorAll(".discord-btn").forEach(b => b.remove()); // un errore non si invia
 
     // Sessione non più valida: si esce e si riapre la finestra di accesso
     if (error.stato === 401 && utenteLoggato() && window.Account) window.Account.sessioneScaduta();
