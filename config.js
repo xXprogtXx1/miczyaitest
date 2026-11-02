@@ -3,6 +3,6 @@
 // La chiave "secret"/"service_role" NON va mai messa qui (sta solo su Render).
 window.MICZY_CONFIG = {
   supabaseUrl: "https://ebasldivbriybigsjoge.supabase.co",
-  supabaseAnonKey: "INCOLLA_QUI_LA_CHIAVE_PUBLISHABLE",
+  supabaseAnonKey: "sb_publishable_Sk1ccestdCarPoQKYDK9Cg_ViF1jUHy",
   backendUrl: "https://backend-miczy-ai.onrender.com"
 };
