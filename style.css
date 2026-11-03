@@ -1252,3 +1252,21 @@ body.dark-mode .auth-msg.ok { color: var(--mint); }
   .chats-panel { top: 2.4rem; }
   .account-menu { right: -3rem; }
 }
+
+/* Avviso in cima al sito (deciso dal pannello admin) */
+.avviso-sito {
+  display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+  padding: 0.5rem 2.4rem 0.5rem 1rem; position: relative;
+  border-bottom: 3px solid var(--edge); color: #17141f;
+  font-weight: 700; font-size: 0.92rem; text-align: center; overflow-wrap: anywhere;
+}
+.avviso-sito.info { background: var(--cyan); }
+.avviso-sito.warn { background: var(--yellow); }
+.avviso-sito.success { background: var(--mint); }
+.avviso-chiudi {
+  position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%);
+  width: 1.7rem; height: 1.7rem; padding: 0; border: 2px solid var(--edge); border-radius: 50%;
+  background: #fff; color: #17141f; font: inherit; font-size: 0.8rem; font-weight: 800; cursor: pointer;
+}
+.avviso-chiudi:hover { background: var(--pink); }
+.avviso-chiudi:focus-visible { outline: 3px solid #17141f; outline-offset: 2px; }
