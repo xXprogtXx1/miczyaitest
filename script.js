@@ -134,7 +134,25 @@ const messaggi = {
     discord: "Invia domanda e risposta su Discord",
     discordConferma: "Vuoi inviare questa domanda e la risposta del bot al creatore di MiczyAI su Discord?",
     discordOk: "Inviato su Discord ✓",
-    discordErrore: "Invio su Discord non riuscito. Riprova tra poco."
+    discordErrore: "Invio su Discord non riuscito. Riprova tra poco.",
+    votoSu: "Mi è piaciuta",
+    votoGiu: "Non mi è piaciuta",
+    votoErrore: "Non sono riuscito a salvare il voto. Riprova.",
+    suggerimentiTitolo: "Prova a chiedere:",
+    suggerimenti: [
+      "Spiegami la fotosintesi come se avessi 10 anni",
+      "Dammi 3 idee per una cena veloce",
+      "Scrivimi una poesia sul lunedì mattina",
+      "Come si impara una lingua più in fretta?",
+      "Raccontami una curiosità sullo spazio",
+      "Aiutami a scrivere un messaggio per dire grazie",
+      "Qual è la differenza tra weather e climate?",
+      "Inventa una barzelletta sui gatti",
+      "Come posso concentrarmi meglio quando studio?",
+      "Fammi un piccolo quiz di cultura generale",
+      "Consigliami un film per stasera",
+      "Spiegami cos'è l'intelligenza artificiale"
+    ]
   },
   en: {
     mhhh: "hmm...",
@@ -148,7 +166,25 @@ const messaggi = {
     discord: "Send question and answer to Discord",
     discordConferma: "Do you want to send this question and the bot's answer to MiczyAI's creator on Discord?",
     discordOk: "Sent to Discord ✓",
-    discordErrore: "Sending to Discord failed. Please try again shortly."
+    discordErrore: "Sending to Discord failed. Please try again shortly.",
+    votoSu: "I liked it",
+    votoGiu: "I didn't like it",
+    votoErrore: "I couldn't save your vote. Please try again.",
+    suggerimentiTitolo: "Try asking:",
+    suggerimenti: [
+      "Explain photosynthesis like I'm 10",
+      "Give me 3 quick dinner ideas",
+      "Write me a poem about Monday mornings",
+      "What's the fastest way to learn a language?",
+      "Tell me a fun fact about space",
+      "Help me write a thank-you message",
+      "What's the difference between weather and climate?",
+      "Make up a joke about cats",
+      "How can I focus better when studying?",
+      "Give me a small general-knowledge quiz",
+      "Recommend a movie for tonight",
+      "Explain what artificial intelligence is"
+    ]
   }
 };
 
@@ -156,6 +192,7 @@ const BACKEND_URL =
   ((window.MICZY_CONFIG && window.MICZY_CONFIG.backendUrl) || "https://backend-miczy-ai.onrender.com")
     .replace(/\/$/, "") + "/chat";
 const SHARE_URL = BACKEND_URL.replace(/\/chat$/, "/share");
+const FEEDBACK_URL = BACKEND_URL.replace(/\/chat$/, "/feedback");
 const MAX_MESSAGGI_INVIATI = 20;   // ultimi N messaggi mandati al backend
 const MAX_MESSAGGI_SALVATI = 100;  // ultimi N messaggi tenuti in localStorage
 const TIMEOUT_RICHIESTA_MS = 60000;
@@ -286,6 +323,7 @@ function aggiornaLingua(lang) {
     b.setAttribute("aria-label", messaggi[lang].discord);
   });
   aggiornaRigenera();
+  aggiornaSuggerimenti(true);
 }
 
 // --- Messaggi ---------------------------------------------------------------
@@ -317,6 +355,74 @@ function creaPulsanteCopia(testo) {
   });
 
   return copyBtn;
+}
+
+// Pollice su/giù: solo per chi ha fatto l'accesso e per risposte salvate sul server (hanno un id)
+function creaPulsantiVoto(idMessaggio, votoIniziale = 0) {
+  const box = document.createElement("span");
+  box.className = "voti";
+  let voto = votoIniziale === 1 || votoIniziale === -1 ? votoIniziale : 0;
+  let inCorso = false;
+
+  const crea = (simbolo, valore, chiave) => {
+    const b = document.createElement("span");
+    b.className = "copy-btn voto-btn";
+    b.textContent = simbolo;
+    b.title = messaggi[lingua][chiave];
+    b.setAttribute("role", "button");
+    b.setAttribute("aria-label", messaggi[lingua][chiave]);
+    b.dataset.voto = String(valore);
+    b.tabIndex = 0;
+    b.addEventListener("click", () => imposta(valore));
+    b.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); imposta(valore); }
+    });
+    return b;
+  };
+  const su = crea("👍", 1, "votoSu"), giu = crea("👎", -1, "votoGiu");
+  const aggiorna = () => {
+    su.setAttribute("aria-pressed", String(voto === 1));
+    giu.setAttribute("aria-pressed", String(voto === -1));
+  };
+
+  async function imposta(valore) {
+    if (inCorso) return;
+    inCorso = true;
+    const precedente = voto;
+    voto = voto === valore ? 0 : valore;   // ripremere lo stesso pollice toglie il voto
+    aggiorna();
+    try {
+      const token = await window.MiczyAuth.token();
+      if (!token) { const e = new Error("sessione scaduta"); e.stato = 401; throw e; }
+      const r = await fetch(FEEDBACK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ message_id: idMessaggio, rating: voto })
+      });
+      if (r.status === 401 && window.Account) window.Account.sessioneScaduta();
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    } catch (e) {
+      voto = precedente;
+      aggiorna();
+      avvisa(messaggi[lingua].votoErrore, true);
+    } finally {
+      inCorso = false;
+    }
+  }
+
+  aggiorna();
+  box.append(su, giu);
+  return box;
+}
+
+// Riga sotto una risposta dell'AI: copia, Discord e (se possibile) pollice
+function creaRigaMeta(testo, idMessaggio, voto) {
+  const riga = document.createElement("div");
+  riga.className = "msg-meta";
+  riga.appendChild(creaPulsanteCopia(testo));
+  riga.appendChild(creaPulsanteDiscord(testo));
+  if (idMessaggio && utenteLoggato()) riga.appendChild(creaPulsantiVoto(idMessaggio, voto));
+  return riga;
 }
 
 // La domanda a cui risponde questo messaggio dell'AI: l'ultimo messaggio utente prima di lui
@@ -388,7 +494,7 @@ function creaPulsanteDiscord(testo) {
   return btn;
 }
 
-function aggiungiMessaggio(testo, mittente, { salva = true } = {}) {
+function aggiungiMessaggio(testo, mittente, { salva = true, id = null, voto = 0 } = {}) {
   const wrapper = document.createElement("div");
   wrapper.className = `msg-wrapper ${mittente}`;
 
@@ -409,6 +515,7 @@ function aggiungiMessaggio(testo, mittente, { salva = true } = {}) {
   if (mittente === "ai") {
     bottomRow.appendChild(creaPulsanteCopia(testo));
     bottomRow.appendChild(creaPulsanteDiscord(testo));
+    if (id && utenteLoggato()) bottomRow.appendChild(creaPulsantiVoto(id, voto));
   }
   msg.appendChild(bottomRow);
 
@@ -457,7 +564,7 @@ function rimuoviLoader() {
 // Scrittura graduale: il testo appare a passi, ma il numero di passi è limitato
 // (circa 200 al massimo) così le risposte lunghe non rallentano il browser.
 // aria-busy evita che lo screen reader legga ogni aggiornamento intermedio.
-function scriviRispostaGraduale(testo) {
+function scriviRispostaGraduale(testo, idMessaggio = null) {
   const wrapper = document.createElement("div");
   wrapper.className = "msg-wrapper ai";
 
@@ -468,10 +575,7 @@ function scriviRispostaGraduale(testo) {
   const msg = document.createElement("div");
   msg.className = "msg ai";
 
-  const bottomRow = document.createElement("div");
-  bottomRow.className = "msg-meta";
-  bottomRow.appendChild(creaPulsanteCopia(testo));
-  bottomRow.appendChild(creaPulsanteDiscord(testo));
+  const bottomRow = creaRigaMeta(testo, idMessaggio, 0);
 
   wrapper.appendChild(avatar);
   wrapper.appendChild(msg);
@@ -494,6 +598,89 @@ function scriviRispostaGraduale(testo) {
       aggiornaRigenera();
     }
   }, 15);
+}
+
+// --- Risposta in streaming ---------------------------------------------------
+// Il backend manda la risposta a pezzi (Server-Sent Events): il testo appare mentre l'IA scrive.
+function creaBollaAI() {
+  const wrapper = document.createElement("div");
+  wrapper.className = "msg-wrapper ai";
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.textContent = "🤖";
+  const msg = document.createElement("div");
+  msg.className = "msg ai";
+  wrapper.append(avatar, msg);
+  chatBox.appendChild(wrapper);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  return { wrapper, msg };
+}
+
+// Legge il flusso. Restituisce { finale, bolla } a risposta completa, oppure null se nel frattempo
+// si è cambiata chat. Se qualcosa va storto toglie la risposta a metà e solleva un errore.
+async function leggiFlusso(response, epocaRichiesta) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "", testo = "", finale = null, bolla = null, frame = 0;
+
+  const disegna = () => {
+    frame = 0;
+    if (!bolla) return;
+    renderMarkdownSicuro(bolla.msg, testo);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  };
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (epocaRichiesta !== epoca) { reader.cancel().catch(() => {}); return null; }
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let fine;
+      while ((fine = buffer.indexOf("\n\n")) !== -1) {
+        const blocco = buffer.slice(0, fine);
+        buffer = buffer.slice(fine + 2);
+        const riga = blocco.split("\n").find(l => l.startsWith("data:"));
+        if (!riga) continue;
+        let ev;
+        try { ev = JSON.parse(riga.slice(5)); } catch (e) { continue; }
+        if (!ev || typeof ev !== "object") continue;
+        if (typeof ev.error === "string") {
+          const err = new Error("flusso interrotto");
+          err.messaggioServer = ev.error;
+          throw err;
+        }
+        if (typeof ev.delta === "string" && ev.delta) {
+          if (!bolla) {
+            rimuoviLoader();
+            bolla = creaBollaAI();
+            chatBox.setAttribute("aria-busy", "true");
+          }
+          testo += ev.delta;
+          if (!frame) frame = requestAnimationFrame(disegna);
+        } else if (ev.done === true) {
+          finale = ev;
+        }
+      }
+    }
+    if (!finale) throw new Error("flusso incompleto");
+  } catch (e) {
+    if (frame) cancelAnimationFrame(frame);
+    if (bolla) bolla.wrapper.remove();
+    chatBox.setAttribute("aria-busy", "false");
+    throw e;
+  }
+  if (frame) cancelAnimationFrame(frame);
+  return { finale, bolla };
+}
+
+// A risposta completa: testo definitivo e pulsanti sotto la bolla
+function chiudiBollaAI(bolla, risposta, idMessaggio) {
+  if (!bolla) bolla = creaBollaAI();   // (flusso senza pezzi: non dovrebbe succedere)
+  renderMarkdownSicuro(bolla.msg, risposta);
+  bolla.msg.appendChild(creaRigaMeta(risposta, idMessaggio, 0));
+  chatBox.scrollTop = chatBox.scrollHeight;
+  chatBox.setAttribute("aria-busy", "false");
 }
 
 // --- Comunicazione con il backend ------------------------------------------
@@ -601,7 +788,7 @@ async function chiediRisposta({ mantieniDomanda = false } = {}) {
 
   try {
     const headers = { "Content-Type": "application/json" };
-    const corpo = { messages: chatHistory.slice(-MAX_MESSAGGI_INVIATI) }; // niente payload infiniti
+    const corpo = { messages: chatHistory.slice(-MAX_MESSAGGI_INVIATI), stream: true }; // niente payload infiniti
 
     if (utenteLoggato()) {
       const token = await window.MiczyAuth.token();
@@ -633,9 +820,19 @@ async function chiediRisposta({ mantieniDomanda = false } = {}) {
       throw err;
     }
 
-    const data = await response.json();
+    let data, bollaFlusso = null, inStreaming = false;
+    if ((response.headers.get("content-type") || "").includes("text/event-stream") && response.body) {
+      // risposta a pezzi (se il server è vecchio e non lo sa fare, si cade nel ramo "else": risposta intera)
+      const esito = await leggiFlusso(response, epocaRichiesta);
+      if (!esito) return false; // nel frattempo si è cambiata chat
+      data = esito.finale;
+      bollaFlusso = esito.bolla;
+      inStreaming = true;
+    } else {
+      data = await response.json();
+    }
     if (epocaRichiesta !== epoca) return false; // nel frattempo si è cambiata chat
-    rimuoviLoader();
+    if (!inStreaming) rimuoviLoader();
 
     if (utenteLoggato() && data && typeof data.conversation_id === "string") {
       conversazioneId = data.conversation_id;
@@ -646,9 +843,11 @@ async function chiediRisposta({ mantieniDomanda = false } = {}) {
         ? data.response
         : messaggi[lingua].nessunaRisposta;
 
+    const idRisposta = data && Number.isInteger(data.message_id) ? data.message_id : null;
     chatHistory.push({ role: "assistant", content: risposta });
     salvaCronologiaChat();
-    scriviRispostaGraduale(risposta);
+    if (inStreaming) chiudiBollaAI(bollaFlusso, risposta, idRisposta);
+    else scriviRispostaGraduale(risposta, idRisposta);
     riuscito = true;
     if (window.Account) window.Account.dopoRisposta(conversazioneId);
 
@@ -686,6 +885,7 @@ async function chiediRisposta({ mantieniDomanda = false } = {}) {
       inAttesa = false;
       submitButton.disabled = false;
       submitButton.textContent = traduzioni[lingua].invia;
+      if (riuscito) aggiornaRigenera(); // ora che non si è più in attesa
     }
   }
 
@@ -761,20 +961,62 @@ function nuovaChat() {
 }
 
 // Mostra una chat salvata sul server: msgs = [{role, content}, ...]
-function mostraConversazione(id, msgs) {
+function mostraConversazione(id, msgs, voti = {}) {
   nuovaChat();
   conversazioneId = id;
-  chatHistory = msgs.filter(m =>
+  const validi = msgs.filter(m =>
     m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string"
-  ).map(m => ({ role: m.role, content: m.content }));
-  chatHistory.forEach(m => {
-    aggiungiMessaggio(m.content, m.role === "user" ? "utente" : "ai", { salva: false });
+  );
+  chatHistory = validi.map(m => ({ role: m.role, content: m.content }));
+  validi.forEach(m => {
+    aggiungiMessaggio(m.content, m.role === "user" ? "utente" : "ai", {
+      salva: false,
+      id: Number.isInteger(m.id) ? m.id : null,
+      voto: (voti && voti[m.id]) || 0
+    });
   });
   aggiornaRigenera();
 }
 
 window.nuovaChat = nuovaChat;
 window.mostraConversazione = mostraConversazione;
+
+// --- Suggerimenti di domande (solo con la chat vuota) ---------------------------------
+// Quattro idee a caso tra quelle disponibili: un tocco e la domanda parte.
+let suggerimentiMostrati = [];
+function aggiornaSuggerimenti(ridisegna = false) {
+  const box = document.getElementById("suggerimenti");
+  if (!box) return;
+  const vuota = chatBox.children.length === 0;
+  box.hidden = !vuota;
+  if (!vuota) { suggerimentiMostrati = []; return; }
+  if (!ridisegna && suggerimentiMostrati.length && box.childElementCount) return;
+
+  const tutte = messaggi[lingua].suggerimenti.slice();
+  for (let i = tutte.length - 1; i > 0; i--) {   // rimescola
+    const j = Math.floor(Math.random() * (i + 1));
+    [tutte[i], tutte[j]] = [tutte[j], tutte[i]];
+  }
+  suggerimentiMostrati = tutte.slice(0, 4);
+  box.textContent = "";
+  const titolo = document.createElement("span");
+  titolo.className = "suggerimenti-titolo";
+  titolo.textContent = messaggi[lingua].suggerimentiTitolo;
+  box.appendChild(titolo);
+  suggerimentiMostrati.forEach(testo => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "suggerimento";
+    b.textContent = testo;
+    b.addEventListener("click", () => {
+      if (inAttesa) return;
+      inputField.value = testo;
+      talkToMiczy();
+    });
+    box.appendChild(b);
+  });
+}
+new MutationObserver(() => aggiornaSuggerimenti()).observe(chatBox, { childList: true });
 
 // --- Avviso del sito (striscia in cima, deciso dal pannello admin) ------------
 // Il testo entra con textContent. Un avviso chiuso resta chiuso finché l'admin non ne scrive uno diverso;
@@ -839,6 +1081,7 @@ window.addEventListener("load", async () => {
   }
 
   caricaStatoSito();  // senza attendere: non rallenta la pagina
+  aggiornaSuggerimenti(true);
 
   // Prima gli account (può ripristinare l'ultima chat), poi, da ospiti, la cronologia locale
   try {

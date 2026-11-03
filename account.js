@@ -40,6 +40,27 @@
       confermaElimina: "Eliminare questa chat? Non si può annullare.",
       chiudiPannello: "Chiudi elenco chat",
       chatSenzaTitolo: "Nuova chat",
+      cerca: "Cerca nelle chat…",
+      nessunRisultato: "Nessuna chat trovata.",
+      fissate: "Fissate",
+      senzaCartella: "Senza cartella",
+      altreAzioni: "Azioni per questa chat",
+      fissa: "📌 Fissa in alto",
+      nonFissare: "📌 Non fissare più",
+      rinomina: "✏️ Rinomina",
+      spostaCartella: "📁 Sposta in una cartella",
+      condividi: "🔗 Condividi con un link",
+      nomeChat: "Nuovo nome della chat",
+      nomeCartella: "Nome della cartella (vuoto = nessuna)",
+      salva: "Salva",
+      annulla: "Annulla",
+      infoCondivisione: "Chiunque abbia il link può leggere questa chat, ma non scrivere né vedere altro.",
+      copiaLink: "Copia il link",
+      linkCopiato: "Link copiato!",
+      smettiCondividere: "Smetti di condividere",
+      condivisioneRevocata: "Il link non funziona più.",
+      chatCondivisa: "Chat condivisa con un link",
+      creoLink: "Creo il link…",
       errori: {
         rete: "Connessione non riuscita. Controlla internet e riprova.",
         credenziali: "Email o password non corrette.",
@@ -95,6 +116,27 @@
       confermaElimina: "Delete this chat? This can't be undone.",
       chiudiPannello: "Close chat list",
       chatSenzaTitolo: "New chat",
+      cerca: "Search your chats…",
+      nessunRisultato: "No chats found.",
+      fissate: "Pinned",
+      senzaCartella: "No folder",
+      altreAzioni: "Actions for this chat",
+      fissa: "📌 Pin to top",
+      nonFissare: "📌 Unpin",
+      rinomina: "✏️ Rename",
+      spostaCartella: "📁 Move to a folder",
+      condividi: "🔗 Share with a link",
+      nomeChat: "New name for the chat",
+      nomeCartella: "Folder name (empty = none)",
+      salva: "Save",
+      annulla: "Cancel",
+      infoCondivisione: "Anyone with the link can read this chat, but can't write or see anything else.",
+      copiaLink: "Copy the link",
+      linkCopiato: "Link copied!",
+      smettiCondividere: "Stop sharing",
+      condivisioneRevocata: "The link no longer works.",
+      chatCondivisa: "Chat shared with a link",
+      creoLink: "Creating the link…",
       errori: {
         rete: "Connection failed. Check your internet and try again.",
         credenziali: "Wrong email or password.",
@@ -284,6 +326,15 @@
   }
 
   // --- Pannello "Le mie chat" ----------------------------------------------------------
+  let funzioniChat = true;          // false se nel database mancano le colonne nuove (migrazione-chat.sql)
+  let condivise = new Set();        // id delle chat che hanno un link
+  let cartelleChiuse = new Set();   // cartelle ripiegate (solo finché la pagina resta aperta)
+  let menuId = null;                // chat con il menu azioni aperto
+  let modifica = null;              // { id, tipo: "rinomina" | "cartella" | "condividi", link? }
+  let ricerca = "";                 // testo cercato
+  let risultatiRicerca = null;      // null = nessuna ricerca; altrimenti [{ chat, snippet }]
+  let timerRicerca;
+
   function apriPannello() {
     $("chatsPanel").classList.add("open");
     $("chatsPanel").setAttribute("aria-hidden", "false");
@@ -303,53 +354,358 @@
 
   async function aggiornaElenco() {
     if (!MiczyAuth.utente()) return;
-    const r = await MiczyAuth.rest("GET",
-      "/rest/v1/conversations?select=id,title,updated_at&order=updated_at.desc&limit=100");
+    const base = "/rest/v1/conversations?order=updated_at.desc&limit=200&select=";
+    let r = await MiczyAuth.rest("GET", base + "id,title,updated_at,pinned,folder");
     if (r.stato === 401) return sessioneScaduta();
+    if (r.ok) {
+      funzioniChat = true;
+    } else {
+      // forse manca la migrazione: si ripiega sull'elenco semplice (senza fissa/cartelle/link)
+      r = await MiczyAuth.rest("GET", base + "id,title,updated_at");
+      if (r.stato === 401) return sessioneScaduta();
+      if (r.ok) funzioniChat = false;
+    }
     if (!r.ok || !Array.isArray(r.dati)) return;
     elencoChat = r.dati;
+    if (funzioniChat) {
+      const c = await MiczyAuth.rest("GET", "/rest/v1/shared_chats?select=conversation_id");
+      condivise = new Set(c.ok && Array.isArray(c.dati) ? c.dati.map(x => x.conversation_id) : []);
+    } else {
+      condivise = new Set();
+    }
     disegnaElenco();
+  }
+
+  // Cambia un campo di una chat (titolo, fissata, cartella) e aggiorna l'elenco locale
+  async function aggiornaChat(id, campi) {
+    const r = await MiczyAuth.rest("PATCH", `/rest/v1/conversations?id=eq.${encodeURIComponent(id)}`, campi,
+      { Prefer: "return=minimal" });
+    if (r.stato === 401) { sessioneScaduta(); return false; }
+    if (!r.ok) { avviso(errore("generico"), true); return false; }
+    const c = elencoChat.find(x => x.id === id);
+    if (c) Object.assign(c, campi);
+    return true;
+  }
+
+  function pulsante(classe, testo, alClick) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = classe;
+    b.textContent = testo;
+    b.addEventListener("click", alClick);
+    return b;
+  }
+
+  // Piccolo modulo dentro la riga: una casella di testo con Salva/Annulla
+  function creaEditor({ etichetta, valore, max, cartelle, alSalvare }) {
+    const form = document.createElement("form");
+    form.className = "chat-editor";
+    const l = document.createElement("label");
+    l.textContent = etichetta;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.maxLength = max;
+    input.value = valore || "";
+    input.autocomplete = "off";
+    if (cartelle && cartelle.length) {
+      const dl = document.createElement("datalist");
+      dl.id = "elencoCartelle";
+      cartelle.forEach(n => { const o = document.createElement("option"); o.value = n; dl.appendChild(o); });
+      form.appendChild(dl);
+      input.setAttribute("list", "elencoCartelle");
+    }
+    l.appendChild(input);
+    const riga = document.createElement("div");
+    riga.className = "chat-editor-btn";
+    const ok = pulsante("chat-azione ok", t("salva"), () => {});
+    ok.type = "submit";
+    riga.append(ok, pulsante("chat-azione", t("annulla"), () => { modifica = null; disegnaElenco(); }));
+    form.append(l, riga);
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      ok.disabled = true;
+      if (await alSalvare(input.value.trim())) { modifica = null; menuId = null; }
+      else ok.disabled = false;
+      disegnaElenco();
+    });
+    setTimeout(() => input.focus(), 0);
+    return form;
+  }
+
+  function linkDi(token) {
+    const base = location.href.replace(/[?#].*$/, "").replace(/[^/]*$/, "");
+    return `${base}condivisa/?c=${encodeURIComponent(token)}`;
+  }
+
+  async function apriCondivisione(id) {
+    modifica = { id, tipo: "condividi", link: null };
+    disegnaElenco();
+    const r = await MiczyAuth.backend("/chats/share", { metodo: "POST", corpo: { conversation_id: id } });
+    if (r.stato === 401) return sessioneScaduta();
+    if (!modifica || modifica.id !== id) return;
+    if (!r.ok || !r.dati || !r.dati.token) {
+      modifica = null;
+      avviso((r.dati && r.dati.response) || errore("generico"), true);
+    } else {
+      modifica.link = linkDi(r.dati.token);
+      condivise.add(id);
+    }
+    disegnaElenco();
+  }
+
+  async function smettiDiCondividere(id) {
+    const r = await MiczyAuth.backend("/chats/unshare", { metodo: "POST", corpo: { conversation_id: id } });
+    if (r.stato === 401) return sessioneScaduta();
+    if (!r.ok) return avviso((r.dati && r.dati.response) || errore("generico"), true);
+    condivise.delete(id);
+    modifica = null; menuId = null;
+    avviso(t("condivisioneRevocata"));
+    disegnaElenco();
+  }
+
+  function creaPannelloCondivisione(c) {
+    const box = document.createElement("div");
+    box.className = "chat-condividi";
+    if (!modifica.link) { box.textContent = t("creoLink"); return box; }
+    const info = document.createElement("p");
+    info.textContent = t("infoCondivisione");
+    const campo = document.createElement("input");
+    campo.type = "text"; campo.readOnly = true; campo.value = modifica.link;
+    campo.setAttribute("aria-label", t("chatCondivisa"));
+    campo.addEventListener("focus", () => campo.select());
+    const riga = document.createElement("div");
+    riga.className = "chat-editor-btn";
+    riga.append(
+      pulsante("chat-azione ok", t("copiaLink"), async () => {
+        try { await navigator.clipboard.writeText(modifica.link); avviso(t("linkCopiato")); }
+        catch (e) { campo.focus(); campo.select(); }
+      }),
+      pulsante("chat-azione", t("smettiCondividere"), () => smettiDiCondividere(c.id)),
+      pulsante("chat-azione", t("chiudi"), () => { modifica = null; disegnaElenco(); })
+    );
+    box.append(info, campo, riga);
+    return box;
+  }
+
+  function creaAzioni(c) {
+    if (modifica && modifica.id === c.id) {
+      if (modifica.tipo === "rinomina") {
+        return creaEditor({ etichetta: t("nomeChat"), valore: c.title, max: 120, alSalvare: async nome => {
+          if (!nome) return false;
+          return aggiornaChat(c.id, { title: nome });
+        } });
+      }
+      if (modifica.tipo === "cartella") {
+        const nomi = Array.from(new Set(elencoChat.map(x => x.folder).filter(Boolean))).sort();
+        return creaEditor({ etichetta: t("nomeCartella"), valore: c.folder, max: 40, cartelle: nomi, alSalvare: async nome =>
+          aggiornaChat(c.id, { folder: nome || null }) });
+      }
+      return creaPannelloCondivisione(c);
+    }
+    const box = document.createElement("div");
+    box.className = "chat-azioni";
+    box.setAttribute("role", "group");
+    box.setAttribute("aria-label", t("altreAzioni"));
+    if (funzioniChat) {
+      box.appendChild(pulsante("chat-azione", c.pinned ? t("nonFissare") : t("fissa"), async () => {
+        if (await aggiornaChat(c.id, { pinned: !c.pinned })) { menuId = null; disegnaElenco(); }
+      }));
+    }
+    box.appendChild(pulsante("chat-azione", t("rinomina"), () => { modifica = { id: c.id, tipo: "rinomina" }; disegnaElenco(); }));
+    if (funzioniChat) {
+      box.appendChild(pulsante("chat-azione", t("spostaCartella"), () => { modifica = { id: c.id, tipo: "cartella" }; disegnaElenco(); }));
+      box.appendChild(pulsante("chat-azione", t("condividi"), () => apriCondivisione(c.id)));
+    }
+    box.appendChild(pulsante("chat-azione rosso", "✕ " + t("eliminaChat"), () => eliminaChat(c.id)));
+    return box;
+  }
+
+  // Una riga dell'elenco. In una ricerca mostra anche il pezzetto di testo trovato.
+  function creaRiga(c, snippet) {
+    const li = document.createElement("li");
+    li.className = "chat-riga" + (c.id === window.conversazioneAttiva() ? " attiva" : "") + (menuId === c.id ? " aperta" : "");
+
+    const apri = document.createElement("button");
+    apri.type = "button";
+    apri.className = "chat-item";
+    const titolo = document.createElement("span");
+    titolo.className = "chat-titolo";
+    titolo.textContent = (c.pinned && funzioniChat ? "📌 " : "") + (c.title || t("chatSenzaTitolo")); // textContent: niente HTML nei titoli
+    apri.appendChild(titolo);
+    if (snippet) {
+      const sn = document.createElement("span");
+      sn.className = "chat-snippet";
+      sn.appendChild(conEvidenza(snippet, ricerca));
+      apri.appendChild(sn);
+    }
+    const data = document.createElement("small");
+    data.textContent = dataBreve(c.updated_at) + (condivise.has(c.id) ? " · 🔗" : "");
+    if (condivise.has(c.id)) data.title = t("chatCondivisa");
+    apri.appendChild(data);
+    apri.addEventListener("click", () => apriChat(c.id));
+
+    const menu = document.createElement("button");
+    menu.type = "button";
+    menu.className = "chat-del chat-menu-btn";
+    menu.textContent = "⋯";
+    menu.title = t("altreAzioni");
+    menu.setAttribute("aria-label", t("altreAzioni"));
+    menu.setAttribute("aria-expanded", String(menuId === c.id));
+    menu.addEventListener("click", () => {
+      menuId = menuId === c.id ? null : c.id;
+      modifica = null;
+      disegnaElenco();
+    });
+
+    li.append(apri, menu);
+    if (menuId === c.id) li.appendChild(creaAzioni(c));
+    return li;
+  }
+
+  // Evidenzia nel testo le parole cercate con <mark>, senza innerHTML
+  function conEvidenza(testo, q) {
+    const frag = document.createDocumentFragment();
+    const basso = testo.toLowerCase(), cerca = (q || "").toLowerCase();
+    let da = 0, i;
+    while (cerca && (i = basso.indexOf(cerca, da)) !== -1) {
+      if (i > da) frag.appendChild(document.createTextNode(testo.slice(da, i)));
+      const m = document.createElement("mark");
+      m.textContent = testo.slice(i, i + cerca.length);
+      frag.appendChild(m);
+      da = i + cerca.length;
+    }
+    if (da < testo.length) frag.appendChild(document.createTextNode(testo.slice(da)));
+    return frag;
+  }
+
+  // Intestazione ripiegabile di una sezione (Fissate / una cartella / Senza cartella)
+  function creaSezione(chiave, titolo, chats, ripiegabile) {
+    const li = document.createElement("li");
+    li.className = "chat-sezione";
+    const chiusa = ripiegabile && cartelleChiuse.has(chiave);
+    const testa = document.createElement("button");
+    testa.type = "button";
+    testa.className = "chat-sezione-testa";
+    testa.setAttribute("aria-expanded", String(!chiusa));
+    testa.textContent = `${chiusa ? "▸" : "▾"} ${titolo} (${chats.length})`;
+    testa.addEventListener("click", () => {
+      chiusa ? cartelleChiuse.delete(chiave) : cartelleChiuse.add(chiave);
+      disegnaElenco();
+    });
+    li.appendChild(testa);
+    if (!chiusa) {
+      const ul = document.createElement("ul");
+      ul.className = "chats-list interna";
+      chats.forEach(c => ul.appendChild(creaRiga(c)));
+      li.appendChild(ul);
+    }
+    return li;
   }
 
   function disegnaElenco() {
     const lista = $("chatsList");
     lista.textContent = "";
+    $("chatsCerca").placeholder = t("cerca");
+
+    if (risultatiRicerca) {
+      $("chatsVuoto").hidden = risultatiRicerca.length > 0;
+      $("chatsVuoto").textContent = t("nessunRisultato");
+      risultatiRicerca.forEach(x => lista.appendChild(creaRiga(x.chat, x.snippet)));
+      return;
+    }
+
     $("chatsVuoto").hidden = elencoChat.length > 0;
     $("chatsVuoto").textContent = t("nessunaChat");
 
-    elencoChat.forEach(c => {
-      const li = document.createElement("li");
-      li.className = "chat-riga" + (c.id === window.conversazioneAttiva() ? " attiva" : "");
-
-      const apri = document.createElement("button");
-      apri.type = "button";
-      apri.className = "chat-item";
-      const titolo = document.createElement("span");
-      titolo.className = "chat-titolo";
-      titolo.textContent = c.title || t("chatSenzaTitolo"); // textContent: i titoli non possono contenere HTML
-      const data = document.createElement("small");
-      data.textContent = dataBreve(c.updated_at);
-      apri.append(titolo, data);
-      apri.addEventListener("click", () => apriChat(c.id));
-
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "chat-del";
-      del.textContent = "✕";
-      del.title = del.ariaLabel = t("eliminaChat");
-      del.addEventListener("click", () => eliminaChat(c.id));
-
-      li.append(apri, del);
-      lista.appendChild(li);
+    if (!funzioniChat) {
+      elencoChat.forEach(c => lista.appendChild(creaRiga(c)));
+      return;
+    }
+    const fissate = elencoChat.filter(c => c.pinned);
+    const cartelle = new Map();
+    const senza = [];
+    elencoChat.filter(c => !c.pinned).forEach(c => {
+      if (c.folder) { if (!cartelle.has(c.folder)) cartelle.set(c.folder, []); cartelle.get(c.folder).push(c); }
+      else senza.push(c);
     });
+    if (fissate.length) lista.appendChild(creaSezione("@fissate", "📌 " + t("fissate"), fissate, true));
+    Array.from(cartelle.keys()).sort((a, b) => a.localeCompare(b)).forEach(nome =>
+      lista.appendChild(creaSezione("cartella:" + nome, "📁 " + nome, cartelle.get(nome), true)));
+    if (fissate.length || cartelle.size) {
+      if (senza.length) lista.appendChild(creaSezione("@senza", t("senzaCartella"), senza, true));
+    } else {
+      senza.forEach(c => lista.appendChild(creaRiga(c)));
+    }
+  }
+
+  // --- Ricerca nelle chat ---------------------------------------------------------------
+  function ritaglia(testo, q) {
+    const i = testo.toLowerCase().indexOf(q.toLowerCase());
+    if (i < 0) return testo.slice(0, 80);
+    const da = Math.max(0, i - 25), a = Math.min(testo.length, i + q.length + 40);
+    return (da > 0 ? "…" : "") + testo.slice(da, a).replace(/\s+/g, " ") + (a < testo.length ? "…" : "");
+  }
+
+  function avviaRicerca(testo) {
+    clearTimeout(timerRicerca);
+    testo = testo.trim();
+    if (testo.length < 2) {
+      ricerca = ""; risultatiRicerca = null;
+      return disegnaElenco();
+    }
+    timerRicerca = setTimeout(() => eseguiRicerca(testo), 300);
+  }
+
+  async function eseguiRicerca(q) {
+    ricerca = q;
+    // * % , ( ) hanno un significato nei filtri dell'API: si tolgono dalla parola cercata
+    const pulita = q.replace(/[*%,()\\]/g, " ").trim();
+    if (pulita.length < 2) { risultatiRicerca = []; return disegnaElenco(); }
+    const r = await MiczyAuth.rest("GET",
+      `/rest/v1/messages?content=ilike.${encodeURIComponent("*" + pulita + "*")}&select=conversation_id,content&order=id.desc&limit=80`);
+    if (ricerca !== q) return;   // nel frattempo l'utente ha scritto altro
+    if (r.stato === 401) return sessioneScaduta();
+
+    const trovate = new Map();   // id chat -> pezzetto di testo (null se ha trovato solo il titolo)
+    elencoChat.forEach(c => { if ((c.title || "").toLowerCase().includes(pulita.toLowerCase())) trovate.set(c.id, null); });
+    (r.ok && Array.isArray(r.dati) ? r.dati : []).forEach(m => {
+      if (typeof m.content === "string" && !trovate.get(m.conversation_id)) trovate.set(m.conversation_id, ritaglia(m.content, pulita));
+    });
+
+    // chat trovate che non sono nell'elenco già caricato: ci serve il titolo
+    const mancanti = Array.from(trovate.keys()).filter(id => !elencoChat.some(c => c.id === id));
+    let extra = [];
+    if (mancanti.length) {
+      const c = await MiczyAuth.rest("GET", `/rest/v1/conversations?id=in.(${mancanti.join(",")})&select=id,title,updated_at`);
+      if (ricerca !== q) return;
+      if (c.ok && Array.isArray(c.dati)) extra = c.dati;
+    }
+    const chatDi = id => elencoChat.find(c => c.id === id) || extra.find(c => c.id === id);
+    risultatiRicerca = Array.from(trovate.entries())
+      .map(([id, snippet]) => ({ chat: chatDi(id), snippet }))
+      .filter(x => x.chat);
+    disegnaElenco();
+  }
+
+  // Messaggi di una chat con i voti dati dall'utente (👍/👎)
+  async function caricaMessaggi(id) {
+    const r = await MiczyAuth.rest("GET",
+      `/rest/v1/messages?conversation_id=eq.${encodeURIComponent(id)}&select=id,role,content&order=id.asc&limit=500`);
+    if (!r.ok || !Array.isArray(r.dati)) return r;
+    const voti = {};
+    const ids = r.dati.filter(m => m.role === "assistant" && Number.isInteger(m.id)).map(m => m.id);
+    if (ids.length) {
+      const v = await MiczyAuth.rest("GET", `/rest/v1/feedback?select=message_id,rating&message_id=in.(${ids.join(",")})`);
+      if (v.ok && Array.isArray(v.dati)) v.dati.forEach(x => { voti[x.message_id] = x.rating; });
+    }
+    return { ok: true, stato: 200, dati: r.dati, voti };
   }
 
   async function apriChat(id) {
-    const r = await MiczyAuth.rest("GET",
-      `/rest/v1/messages?conversation_id=eq.${encodeURIComponent(id)}&select=role,content&order=id.asc&limit=500`);
+    const r = await caricaMessaggi(id);
     if (r.stato === 401) return sessioneScaduta();
     if (!r.ok || !Array.isArray(r.dati)) return avviso(errore("generico"), true);
-    window.mostraConversazione(id, r.dati);
+    window.mostraConversazione(id, r.dati, r.voti);
     ricordaUltimaChat(id);
     chiudiPannello();
     disegnaElenco();
@@ -366,6 +722,10 @@
       ricordaUltimaChat(null);
     }
     elencoChat = elencoChat.filter(c => c.id !== id);
+    condivise.delete(id);
+    if (risultatiRicerca) risultatiRicerca = risultatiRicerca.filter(x => x.chat.id !== id);
+    if (menuId === id) menuId = null;
+    if (modifica && modifica.id === id) modifica = null;
     disegnaElenco();
   }
 
@@ -390,10 +750,9 @@
     let id = null;
     try { id = k ? localStorage.getItem(k) : null; } catch (e) { /* ignora */ }
     if (!id) return false;
-    const r = await MiczyAuth.rest("GET",
-      `/rest/v1/messages?conversation_id=eq.${encodeURIComponent(id)}&select=role,content&order=id.asc&limit=500`);
+    const r = await caricaMessaggi(id);
     if (!r.ok || !Array.isArray(r.dati) || !r.dati.length) { ricordaUltimaChat(null); return false; }
-    window.mostraConversazione(id, r.dati);
+    window.mostraConversazione(id, r.dati, r.voti);
     return true;
   }
 
@@ -432,6 +791,7 @@
       $("chatsPanel").classList.contains("open") ? chiudiPannello() : apriPannello();
     });
     $("chatsClose").addEventListener("click", chiudiPannello);
+    $("chatsCerca").addEventListener("input", e => avviaRicerca(e.target.value));
     $("nuovaChatBtn").addEventListener("click", () => {
       window.nuovaChat();
       ricordaUltimaChat(null);
@@ -472,6 +832,8 @@
         await ripristinaUltimaChat();
       } else {
         elencoChat = [];
+        condivise = new Set(); menuId = null; modifica = null; risultatiRicerca = null; ricerca = "";
+        $("chatsCerca").value = "";
         disegnaElenco();
         window.caricaCronologiaOspite(); // tornano le chat locali da ospite
       }

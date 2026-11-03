@@ -105,6 +105,8 @@
   <main>
     <div id="chat-box" class="chat-box" role="log" aria-live="polite" aria-relevant="additions" data-vuoto=""></div>
 
+    <div id="suggerimenti" class="suggerimenti" hidden></div>
+
     <div class="composer">
       <div class="chat-controls">
         <button id="chatsBtn" class="chats-btn" type="button" aria-label="Le mie chat" title="Le mie chat" hidden>
@@ -131,6 +133,7 @@
         <button id="chatsClose" class="chats-close" type="button" aria-label="Chiudi elenco chat">✕</button>
       </div>
       <button id="nuovaChatBtn" class="nuova-chat" type="button">+ Nuova chat</button>
+      <input id="chatsCerca" class="chats-cerca" type="search" placeholder="Cerca nelle chat…" aria-label="Cerca nelle tue chat" maxlength="60" autocomplete="off" />
       <p id="chatsVuoto" class="chats-vuoto" hidden></p>
       <ul id="chatsList" class="chats-list"></ul>
     </aside>
