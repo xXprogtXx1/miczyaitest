@@ -776,6 +776,48 @@ function mostraConversazione(id, msgs) {
 window.nuovaChat = nuovaChat;
 window.mostraConversazione = mostraConversazione;
 
+// --- Avviso del sito (striscia in cima, deciso dal pannello admin) ------------
+// Il testo entra con textContent. Un avviso chiuso resta chiuso finché l'admin non ne scrive uno diverso;
+// la manutenzione invece non si può chiudere. Se il backend non risponde, semplicemente non si mostra nulla.
+function mostraStriscia(id, tipo, icona, testo, chiudibile) {
+  let s = document.getElementById(id);
+  if (!s) {
+    s = document.createElement("div");
+    s.id = id;
+    document.body.insertBefore(s, document.body.firstChild);
+  }
+  s.className = "avviso-sito " + tipo;
+  s.setAttribute("role", "status");
+  s.textContent = "";
+  const t = document.createElement("span");
+  t.className = "avviso-testo";
+  t.textContent = icona + " " + testo;
+  s.appendChild(t);
+  if (chiudibile) {
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "avviso-chiudi";
+    x.setAttribute("aria-label", lingua === "en" ? "Close notice" : "Chiudi avviso");
+    x.textContent = "✕";
+    x.addEventListener("click", () => { scriviStorage("miczy.avvisoChiuso", testo); s.remove(); });
+    s.appendChild(x);
+  }
+}
+
+async function caricaStatoSito() {
+  try {
+    const r = await fetch(BACKEND_URL.replace(/\/chat$/, "/status"), { signal: AbortSignal.timeout(10000) });
+    if (!r.ok) return;
+    const d = await r.json();
+    const m = d && d.maintenance, b = d && d.banner;
+    if (m && m.on && typeof m.message === "string") mostraStriscia("avvisoManutenzione", "warn", "🚧", m.message, false);
+    if (b && b.on && typeof b.text === "string" && b.text && leggiStorage("miczy.avvisoChiuso") !== b.text) {
+      const tipo = ["info", "warn", "success"].includes(b.kind) ? b.kind : "info";
+      mostraStriscia("avvisoSito", tipo, tipo === "warn" ? "⚠️" : tipo === "success" ? "🎉" : "📣", b.text, true);
+    }
+  } catch (e) { /* backend addormentato o irraggiungibile: nessun avviso */ }
+}
+
 // --- Inizializzazione (un solo punto d'ingresso) -----------------------------
 window.addEventListener("load", async () => {
   if (leggiStorage("darkMode") === "true") {
@@ -795,6 +837,8 @@ window.addEventListener("load", async () => {
       cancellaCronologiaChat();
     });
   }
+
+  caricaStatoSito();  // senza attendere: non rallenta la pagina
 
   // Prima gli account (può ripristinare l'ultima chat), poi, da ospiti, la cronologia locale
   try {
