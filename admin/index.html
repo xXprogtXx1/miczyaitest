@@ -172,6 +172,7 @@
             <button class="tab" role="tab" id="tab-panoramica" aria-controls="sez-panoramica" aria-selected="true" data-tab="panoramica">📊 Panoramica</button>
             <button class="tab" role="tab" id="tab-utenti" aria-controls="sez-utenti" aria-selected="false" data-tab="utenti">👥 Utenti</button>
             <button class="tab" role="tab" id="tab-messaggi" aria-controls="sez-messaggi" aria-selected="false" data-tab="messaggi">🔎 Messaggi</button>
+            <button class="tab" role="tab" id="tab-feedback" aria-controls="sez-feedback" aria-selected="false" data-tab="feedback">👍 Feedback</button>
             <button class="tab" role="tab" id="tab-sito" aria-controls="sez-sito" aria-selected="false" data-tab="sito">⚙️ Sito</button>
             <button class="tab" role="tab" id="tab-registro" aria-controls="sez-registro" aria-selected="false" data-tab="registro">📜 Registro</button>
           </div>
@@ -263,6 +264,21 @@
             <p class="nota" style="margin:-.3rem 0 .6rem">Cerca nelle chat salvate degli utenti registrati (domande e risposte). Gli ospiti non vengono salvati.</p>
             <div id="erroriMsg" class="msg err" hidden></div>
             <div id="risultatiMsg"></div>
+          </section>
+
+          <!-- FEEDBACK -->
+          <section class="pannello-tab" id="sez-feedback" role="tabpanel" aria-labelledby="tab-feedback" hidden>
+            <div class="titolo-sez">
+              <h2>Cosa pensano le persone delle risposte</h2>
+              <button class="btn" type="button" id="aggiornaFb">↻ Aggiorna</button>
+            </div>
+            <div id="erroriFb" class="msg err" hidden></div>
+            <div class="tiles" id="tilesFb"></div>
+            <div class="titolo-sez">
+              <h2>Ultimi voti</h2>
+              <div class="seg" id="segFb" role="group" aria-label="Filtro voti"></div>
+            </div>
+            <div id="listaFb"></div>
           </section>
 
           <!-- SITO -->

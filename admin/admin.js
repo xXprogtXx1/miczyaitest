@@ -772,7 +772,7 @@
       const custom = document.createElement("textarea"); custom.maxLength = 500; custom.value = s.personality.custom || "";
       custom.placeholder = "Es. Rispondi come un gatto filosofo.";
       const rigaCustom = etichetta("Istruzioni personalizzate", custom);
-      const aggiorna = () => { rigaCustom.hidden = !(f.querySelector("input[name=pers]:checked") || {}).value || f.querySelector("input[name=pers]:checked").value !== "custom"; };
+      const aggiorna = () => { const c = f.querySelector("input[name=pers]:checked"); rigaCustom.hidden = !(c && c.value === "custom"); };
       dati.personalities.forEach(p => {
         const l = el("label"); l.title = p.label;
         const r = document.createElement("input"); r.type = "radio"; r.name = "pers"; r.value = p.id; r.checked = p.id === s.personality.id;
@@ -831,6 +831,55 @@
   caricatori.sito = caricaSito;
 
   // ===========================================================================
+  // Feedback (👍 / 👎 sulle risposte)
+  // ===========================================================================
+  let fbDati = null, fbFiltro = "down";
+
+  function disegnaFeedback() {
+    const d = fbDati;
+    const t = $("tilesFb");
+    t.textContent = "";
+    const tot = (d.up || 0) + (d.down || 0);
+    t.append(
+      tile("👍 " + numero(d.up), "Piaciute", "ultimi 7 giorni: " + numero(d.up_7d)),
+      tile("👎 " + numero(d.down), "Non piaciute", "ultimi 7 giorni: " + numero(d.down_7d)),
+      tile(tot ? Math.round((d.up || 0) / tot * 100) + "%" : "—", "Gradimento", tot ? "su " + numero(tot) + " voti" : "ancora nessun voto")
+    );
+    segmenti($("segFb"), [{ id: "down", nome: "👎 Non piaciute" }, { id: "up", nome: "👍 Piaciute" }, { id: "all", nome: "Tutte" }], fbFiltro, id => {
+      fbFiltro = id; disegnaFeedback();
+    });
+    const box = $("listaFb");
+    box.textContent = "";
+    const lista = (d.recent || []).filter(x => fbFiltro === "all" || (fbFiltro === "down" ? x.rating < 0 : x.rating > 0));
+    if (!lista.length) { box.appendChild(el("p", "msg", "Nessun voto in questa categoria.")); return; }
+    const ul = el("ul", "chat-log");
+    lista.forEach(x => {
+      const li = el("li", "ai");
+      li.appendChild(el("small", "", (x.rating < 0 ? "👎" : "👍") + " · " + (x.email || "—") + " · " + dataLeggibile(x.created_at)));
+      if (x.question) {
+        const q = el("div"); q.appendChild(el("b", "", "Domanda: ")); q.appendChild(document.createTextNode(String(x.question)));
+        li.appendChild(q);
+      }
+      const a = el("div"); a.style.marginTop = "0.3rem";
+      a.appendChild(el("b", "", "Risposta: ")); a.appendChild(document.createTextNode(String(x.answer || "")));
+      li.appendChild(a);
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+  }
+
+  async function caricaFeedback() {
+    const r = await backendPaziente("/admin/feedback");
+    if (!r.ok) { mostraErrore($("erroriFb"), erroreDa(r)); giaCaricate.feedback = false; return; }
+    stato("");
+    mostraErrore($("erroriFb"), "");
+    fbDati = r.dati || {};
+    disegnaFeedback();
+  }
+  caricatori.feedback = caricaFeedback;
+  $("aggiornaFb").addEventListener("click", caricaFeedback);
+
+  // ===========================================================================
   // Registro
   // ===========================================================================
   const NOMI_AZIONI = {
@@ -860,8 +909,7 @@
   }
   caricatori.registro = caricaRegistro;
   $("aggiornaReg").addEventListener("click", caricaRegistro);
-  // il registro si ricarica da solo quando si torna sulla scheda dopo aver fatto azioni
-  document.querySelector("[data-tab=registro]").addEventListener("click", () => { if (giaCaricate.registro === false) { giaCaricate.registro = true; caricaRegistro(); } });
+  // (dopo ogni azione giaCaricate.registro torna false: aprendo la scheda il registro si ricarica)
 
   // ===========================================================================
   // Avvio
