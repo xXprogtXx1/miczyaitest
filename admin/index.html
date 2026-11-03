@@ -11,11 +11,16 @@
     :root {
       --bg: #d9ccff; --win: #fff; --bar: #ffd93d; --ink: #17141f; --muted: #5b5675;
       --edge: #17141f; --hard: #17141f; --pink: #ff5ca8; --cyan: #3ddcff; --mint: #43e8a0; --field: #fff;
-      --row: #f4f0ff;
+      --row: #f4f0ff; --sel: #ffd93d;
+      /* grafici (colori validati con lo script di dataviz, chiaro e scuro) */
+      --c-bar: #6a46ee; --c-grid: #e4defa; --c-axis: #5b5675; --c-hover: rgba(106, 70, 238, 0.12);
+      --h0: #f1edff; --h1: #b4a0ff; --h2: #9275fb; --h3: #6f4ceb; --h4: #4a28c4;
     }
     body.dark-mode {
       --bg: #140a33; --win: #1b1040; --bar: #3a1f8a; --ink: #f1ecff; --muted: #b9abe8;
       --edge: #6ef3ff; --hard: #ff3cac; --field: #1a0f3d; --row: #231552;
+      --c-bar: #8670f5; --c-grid: #2e2063; --c-axis: #b9abe8; --c-hover: rgba(134, 112, 245, 0.22);
+      --h0: #261857; --h1: #4f3dbb; --h2: #6f58e8; --h3: #9a85ff; --h4: #cbbfff;
     }
     * { box-sizing: border-box; }
     body {
@@ -23,7 +28,7 @@
       font-family: "Instrument Sans", system-ui, "Segoe UI", sans-serif;
       background: var(--bg); color: var(--ink);
     }
-    .wrap { max-width: 64rem; margin: 0 auto; }
+    .wrap { max-width: 68rem; margin: 0 auto; }
     .win { border: 3px solid var(--edge); border-radius: 1.1rem; background: var(--win); box-shadow: 6px 6px 0 var(--hard); overflow: hidden; }
     .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.7rem 1rem; background: var(--bar); border-bottom: 3px solid var(--edge); color: #17141f; }
     body.dark-mode .bar { color: var(--ink); }
@@ -34,22 +39,73 @@
       background: var(--field); color: var(--ink); font: inherit; font-size: 0.85rem; font-weight: 700;
       text-decoration: none; cursor: pointer; box-shadow: 2px 2px 0 var(--hard);
     }
-    .btn:hover { background: var(--bar); color: #17141f; }
+    .btn:hover { background: var(--sel); color: #17141f; }
     .btn:active { transform: translate(2px, 2px); box-shadow: none; }
     .btn.rosso { background: var(--pink); color: #17141f; }
     .btn.verde { background: var(--mint); color: #17141f; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn:focus-visible, .tab:focus-visible, svg:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
     .msg { margin: 0.5rem 0; padding: 0.7rem 1rem; border: 2px solid var(--edge); border-radius: 0.8rem; background: var(--row); }
     .msg.err { background: var(--pink); color: #17141f; font-weight: 600; }
-    .cerca { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
-    .cerca input, .form input, .form select, .form textarea {
-      width: 100%; padding: 0.5rem 0.8rem; border: 2px solid var(--edge); border-radius: 0.7rem;
-      background: var(--field); color: var(--ink); font: inherit;
-    }
+    .msg.okk { background: var(--mint); color: #17141f; font-weight: 600; }
+
+    /* Schede */
+    .tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+    .tab { padding: 0.4rem 0.9rem; border: 2px solid var(--edge); border-radius: 999px; background: var(--field); color: var(--ink); font: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+    .tab[aria-selected="true"] { background: var(--sel); color: #17141f; box-shadow: 2px 2px 0 var(--hard); }
+    .pannello-tab[hidden] { display: none; }
+
+    /* Titoli e riquadri */
+    .titolo-sez { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 1.2rem 0 0.6rem; }
+    .titolo-sez:first-child { margin-top: 0; }
+    .titolo-sez h2 { margin: 0; font-size: 1.02rem; }
+    .riquadro { padding: 0.9rem; border: 2px solid var(--edge); border-radius: 0.9rem; background: var(--win); }
+    .griglia { display: grid; gap: 0.8rem 1rem; margin-top: 1.2rem; }
+    .g2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); }
+    .nota { margin: 0.4rem 0 0; font-size: 0.8rem; color: var(--muted); }
+
+    /* Numeri grandi */
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 0.6rem; }
+    .tile { padding: 0.7rem 0.8rem; border: 2px solid var(--edge); border-radius: 0.8rem; background: var(--row); }
+    .tiles.due { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tile .n { display: block; font-size: 1.7rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .tile .l { display: block; margin-top: 0.15rem; font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+    .tile .s { display: block; font-size: 0.74rem; color: var(--muted); }
+
+    /* Selettori */
+    .seg { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; }
+    .seg button { padding: 0.2rem 0.65rem; border: 2px solid var(--edge); border-radius: 999px; background: var(--field); color: var(--ink); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+    .seg button[aria-pressed="true"] { background: var(--sel); color: #17141f; }
+
+    /* Grafico a barre e mappa */
+    .grafico { position: relative; }
+    .grafico svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+    .grafico text { fill: var(--c-axis); font-size: 11px; font-family: inherit; }
+    .tip { position: absolute; z-index: 3; pointer-events: none; min-width: 7rem; max-width: 15rem; padding: 0.35rem 0.6rem; border: 2px solid var(--edge); border-radius: 0.6rem; background: var(--win); box-shadow: 2px 2px 0 var(--hard); font-size: 0.8rem; line-height: 1.3; }
+    .tip b { display: block; }
+    .tip[hidden] { display: none; }
+    .legenda-heat { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.4rem; font-size: 0.75rem; color: var(--muted); }
+    .legenda-heat i { display: inline-block; width: 1.1rem; height: 0.7rem; border-radius: 3px; }
+    .tab-dati { margin-top: 0.5rem; max-height: 16rem; overflow: auto; }
+
+    /* Classifica */
+    .classifica { list-style: none; margin: 0; padding: 0; }
+    .classifica li { display: grid; grid-template-columns: 2rem minmax(0, 1fr) 3.2rem; align-items: center; gap: 0.4rem; padding: 0.25rem 0; }
+    .classifica .pos { text-align: center; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+    .classifica .chi { min-width: 0; }
+    .classifica .chi span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; font-weight: 600; }
+    .classifica .asta { height: 12px; margin-top: 3px; border-radius: 0 4px 4px 0; background: var(--c-bar); min-width: 3px; }
+    .classifica .num { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+    /* Domanda più strana */
+    .strana blockquote { margin: 0.5rem 0; padding: 0.6rem 0.8rem; border-left: 5px solid var(--pink); background: var(--row); border-radius: 0 0.6rem 0.6rem 0; font-size: 1.02rem; overflow-wrap: anywhere; white-space: pre-wrap; }
+
+    /* Tabelle */
     .tabella { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
     th, td { padding: 0.5rem 0.6rem; text-align: left; vertical-align: top; border-bottom: 2px solid var(--row); }
     th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
     td.mail { overflow-wrap: anywhere; font-weight: 600; }
     .azioni { display: flex; flex-wrap: wrap; gap: 0.3rem; }
     .azioni .btn { padding: 0.25rem 0.6rem; font-size: 0.78rem; }
@@ -58,20 +114,47 @@
     .tag.ban { background: var(--pink); color: #17141f; }
     .tag.adm { background: var(--cyan); color: #17141f; }
     small.sub { display: block; color: var(--muted); font-weight: 400; }
-    .velo { position: fixed; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center; padding: 1rem; background: rgba(15, 8, 36, 0.6); }
-    .velo.show { display: flex; }
-    .scheda { width: min(34rem, 100%); max-height: 90vh; overflow: auto; padding: 1.2rem; border: 3px solid var(--edge); border-radius: 1.1rem; background: var(--win); box-shadow: 6px 6px 0 var(--hard); }
-    .scheda h2 { margin: 0 0 0.6rem; font-size: 1.1rem; overflow-wrap: anywhere; }
+
+    /* Form */
+    .cerca { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
+    .cerca input, .form input[type="text"], .form input[type="number"], .form input[type="search"], .form select, .form textarea {
+      width: 100%; padding: 0.5rem 0.8rem; border: 2px solid var(--edge); border-radius: 0.7rem;
+      background: var(--field); color: var(--ink); font: inherit;
+    }
+    .form textarea { resize: vertical; min-height: 4rem; }
     .form label { display: block; margin: 0.6rem 0 0.2rem; font-size: 0.82rem; font-weight: 700; }
-    .form .riga { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; font-size: 0.9rem; }
-    .form .riga input { width: auto; }
-    .fondo { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .form .riga { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; font-size: 0.9rem; font-weight: 700; }
+    .form .riga input { width: 1.1rem; height: 1.1rem; }
+    .form .riga label { margin: 0; font-size: 0.9rem; }
+    .form h3 { margin: 0 0 0.3rem; font-size: 1rem; }
+    .fondo { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.9rem; }
+    .fondo .esito { margin-right: auto; font-size: 0.82rem; font-weight: 700; }
+    .scelte { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0.4rem; margin-top: 0.5rem; }
+    .scelte label { display: flex; align-items: center; gap: 0.4rem; margin: 0; padding: 0.4rem 0.6rem; border: 2px solid var(--edge); border-radius: 0.7rem; background: var(--row); cursor: pointer; font-size: 0.85rem; }
+    .scelte input { width: auto; }
+    .scelte label:has(input:checked) { background: var(--sel); color: #17141f; }
+
+    /* Messaggi cercati e chat */
     .chat-log { list-style: none; margin: 0.5rem 0 0; padding: 0; }
     .chat-log li { margin-bottom: 0.5rem; padding: 0.5rem 0.7rem; border: 2px solid var(--edge); border-radius: 0.7rem; background: var(--row); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.86rem; }
     .chat-log li.user { background: #fff3b0; color: #17141f; }
     .chat-log small { display: block; margin-bottom: 0.2rem; color: var(--muted); font-weight: 700; }
     .chat-log li.user small { color: #4a4660; }
+    mark { background: var(--pink); color: #17141f; border-radius: 3px; padding: 0 2px; }
+
+    /* Anteprima avviso */
+    .anteprima { margin-top: 0.6rem; padding: 0.5rem 0.8rem; border: 2px solid var(--edge); border-radius: 0.7rem; font-weight: 600; font-size: 0.9rem; overflow-wrap: anywhere; }
+    .anteprima.info { background: var(--cyan); color: #17141f; }
+    .anteprima.warn { background: var(--sel); color: #17141f; }
+    .anteprima.success { background: var(--mint); color: #17141f; }
+
+    /* Finestre */
+    .velo { position: fixed; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center; padding: 1rem; background: rgba(15, 8, 36, 0.6); }
+    .velo.show { display: flex; }
+    .scheda { width: min(34rem, 100%); max-height: 90vh; overflow: auto; padding: 1.2rem; border: 3px solid var(--edge); border-radius: 1.1rem; background: var(--win); box-shadow: 6px 6px 0 var(--hard); }
+    .scheda h2 { margin: 0 0 0.6rem; font-size: 1.1rem; overflow-wrap: anywhere; }
     [hidden] { display: none !important; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
 </head>
 <body>
@@ -85,19 +168,124 @@
         <div id="stato" class="msg">Caricamento…</div>
 
         <div id="pannello" hidden>
-          <form id="cercaForm" class="cerca">
-            <input id="cerca" type="search" placeholder="Cerca per email…" maxlength="100" aria-label="Cerca per email" />
-            <button class="btn" type="submit">Cerca</button>
-          </form>
-          <div class="tabella">
-            <table>
-              <thead>
-                <tr><th>Utente</th><th>Stato</th><th>Msg 24h</th><th>Totale</th><th>Limite</th><th>Azioni</th></tr>
-              </thead>
-              <tbody id="righe"></tbody>
-            </table>
+          <div class="tabs" role="tablist" aria-label="Sezioni del pannello">
+            <button class="tab" role="tab" id="tab-panoramica" aria-controls="sez-panoramica" aria-selected="true" data-tab="panoramica">📊 Panoramica</button>
+            <button class="tab" role="tab" id="tab-utenti" aria-controls="sez-utenti" aria-selected="false" data-tab="utenti">👥 Utenti</button>
+            <button class="tab" role="tab" id="tab-messaggi" aria-controls="sez-messaggi" aria-selected="false" data-tab="messaggi">🔎 Messaggi</button>
+            <button class="tab" role="tab" id="tab-sito" aria-controls="sez-sito" aria-selected="false" data-tab="sito">⚙️ Sito</button>
+            <button class="tab" role="tab" id="tab-registro" aria-controls="sez-registro" aria-selected="false" data-tab="registro">📜 Registro</button>
           </div>
-          <p id="vuoto" class="msg" hidden>Nessun utente trovato.</p>
+
+          <!-- PANORAMICA -->
+          <section class="pannello-tab" id="sez-panoramica" role="tabpanel" aria-labelledby="tab-panoramica">
+            <div class="titolo-sez">
+              <h2>Numeri di oggi</h2>
+              <button class="btn" type="button" id="aggiornaPan">↻ Aggiorna</button>
+            </div>
+            <div id="erroriPan" class="msg err" hidden></div>
+            <div class="tiles" id="tiles"></div>
+
+            <div class="titolo-sez">
+              <h2>Andamento</h2>
+              <div class="seg" id="segMetrica" role="group" aria-label="Cosa mostrare"></div>
+            </div>
+            <div class="riquadro">
+              <div class="titolo-sez" style="margin:0 0 .4rem">
+                <div class="seg" id="segGiorni" role="group" aria-label="Periodo"></div>
+                <button class="btn" type="button" id="vistaTabella" aria-pressed="false">Vedi come tabella</button>
+              </div>
+              <div class="grafico" id="graficoBox"></div>
+              <div class="tab-dati" id="graficoTab" hidden></div>
+            </div>
+
+            <div class="griglia g2">
+              <div>
+                <div class="titolo-sez"><h2>🔥 Orari di punta</h2></div>
+                <div class="riquadro">
+                  <div class="grafico" id="heatBox"></div>
+                  <div class="legenda-heat" aria-hidden="true">meno <i style="background:var(--h0)"></i><i style="background:var(--h1)"></i><i style="background:var(--h2)"></i><i style="background:var(--h3)"></i><i style="background:var(--h4)"></i> più</div>
+                  <p class="nota">Messaggi degli ultimi 30 giorni, per giorno della settimana e ora (fuso di Roma).</p>
+                </div>
+              </div>
+              <div>
+                <div class="titolo-sez">
+                  <h2>🏆 I più chiacchieroni</h2>
+                  <div class="seg" id="segTop" role="group" aria-label="Periodo classifica"></div>
+                </div>
+                <div class="riquadro"><ol class="classifica" id="classifica"></ol><p class="nota" id="notaTop"></p></div>
+              </div>
+            </div>
+
+            <div class="griglia g2">
+              <div>
+                <div class="titolo-sez"><h2>💸 Costo stimato</h2></div>
+                <div class="riquadro">
+                  <div class="tiles due" id="costi"></div>
+                  <p class="nota" id="notaCosti"></p>
+                </div>
+              </div>
+              <div>
+                <div class="titolo-sez"><h2>🤪 Domanda più strana di oggi</h2></div>
+                <div class="riquadro strana">
+                  <blockquote id="stranaTesto">…</blockquote>
+                  <small class="sub" id="stranaChi"></small>
+                  <div class="fondo"><button class="btn" type="button" id="stranaAltra">🎲 Un'altra!</button></div>
+                  <p class="nota">Pescata a caso tra le domande salvate degli utenti registrati nelle ultime 24 ore.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- UTENTI -->
+          <section class="pannello-tab" id="sez-utenti" role="tabpanel" aria-labelledby="tab-utenti" hidden>
+            <form id="cercaForm" class="cerca">
+              <input id="cerca" type="search" placeholder="Cerca per email…" maxlength="100" aria-label="Cerca per email" />
+              <button class="btn" type="submit">Cerca</button>
+            </form>
+            <div id="erroriUtenti" class="msg err" hidden></div>
+            <div class="tabella">
+              <table>
+                <thead>
+                  <tr><th>Utente</th><th>Stato</th><th class="num">Msg 24h</th><th class="num">Totale</th><th>Limite</th><th>Azioni</th></tr>
+                </thead>
+                <tbody id="righe"></tbody>
+              </table>
+            </div>
+            <p id="vuoto" class="msg" hidden>Nessun utente trovato.</p>
+          </section>
+
+          <!-- MESSAGGI -->
+          <section class="pannello-tab" id="sez-messaggi" role="tabpanel" aria-labelledby="tab-messaggi" hidden>
+            <form id="cercaMsgForm" class="cerca">
+              <input id="cercaMsg" type="search" placeholder="Cerca una parola nei messaggi…" maxlength="100" aria-label="Cerca nei messaggi" />
+              <button class="btn" type="submit">Cerca</button>
+            </form>
+            <p class="nota" style="margin:-.3rem 0 .6rem">Cerca nelle chat salvate degli utenti registrati (domande e risposte). Gli ospiti non vengono salvati.</p>
+            <div id="erroriMsg" class="msg err" hidden></div>
+            <div id="risultatiMsg"></div>
+          </section>
+
+          <!-- SITO -->
+          <section class="pannello-tab" id="sez-sito" role="tabpanel" aria-labelledby="tab-sito" hidden>
+            <div id="erroriSito" class="msg err" hidden></div>
+            <div class="griglia g2" id="formSito"></div>
+          </section>
+
+          <!-- REGISTRO -->
+          <section class="pannello-tab" id="sez-registro" role="tabpanel" aria-labelledby="tab-registro" hidden>
+            <div class="titolo-sez">
+              <h2>Cosa è stato fatto da qui</h2>
+              <button class="btn" type="button" id="aggiornaReg">↻ Aggiorna</button>
+            </div>
+            <div id="erroriReg" class="msg err" hidden></div>
+            <div class="tabella">
+              <table>
+                <thead><tr><th>Quando</th><th>Chi</th><th>Azione</th><th>Su</th><th>Dettagli</th></tr></thead>
+                <tbody id="righeReg"></tbody>
+              </table>
+            </div>
+            <p id="vuotoReg" class="msg" hidden>Ancora nessuna azione registrata.</p>
+          </section>
         </div>
       </div>
     </div>
