@@ -322,6 +322,7 @@ function aggiornaLingua(lang) {
   if (window.Account) window.Account.aggiornaTesti();
   if (window.Impostazioni) window.Impostazioni.aggiornaTesti();
   if (window.Temi) window.Temi.aggiornaTesti();
+  if (window.Ospite) window.Ospite.aggiornaTesti();
   document.querySelectorAll(".discord-btn").forEach(b => {
     b.title = messaggi[lang].discord;
     b.setAttribute("aria-label", messaggi[lang].discord);
@@ -898,6 +899,7 @@ async function chiediRisposta({ mantieniDomanda = false } = {}) {
       submitButton.disabled = false;
       submitButton.textContent = traduzioni[lingua].invia;
       if (riuscito) aggiornaRigenera(); // ora che non si è più in attesa
+      if (window.Ospite) window.Ospite.aggiorna(); // contatore dei messaggi degli ospiti
     }
   }
 

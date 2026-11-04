@@ -26,6 +26,11 @@
       recuperaInviato: "Se l'indirizzo è registrato, riceverai un'email con il link per scegliere una nuova password.",
       passwordCambiata: "Password aggiornata.",
       benvenuto: "Sei dentro!",
+      importaTesto: "Hai una conversazione fatta da ospite. Vuoi salvarla nel tuo account?",
+      importaSalva: "Salva nel mio account",
+      importaNo: "No, grazie",
+      importaFatto: "Conversazione salvata nel tuo account.",
+      importaErrore: "Non sono riuscito a salvarla. Riprova tra poco.",
       emailConfermata: "Email confermata: sei dentro!",
       sessioneScaduta: "Sessione scaduta: accedi di nuovo.",
       esciFatto: "Hai effettuato l'uscita.",
@@ -102,6 +107,11 @@
       recuperaInviato: "If the address is registered, you'll get an email with a link to choose a new password.",
       passwordCambiata: "Password updated.",
       benvenuto: "You're in!",
+      importaTesto: "You have a conversation from when you were a guest. Save it to your account?",
+      importaSalva: "Save to my account",
+      importaNo: "No, thanks",
+      importaFatto: "Conversation saved to your account.",
+      importaErrore: "I couldn't save it. Please try again shortly.",
       emailConfermata: "Email confirmed: you're in!",
       sessioneScaduta: "Session expired: please log in again.",
       esciFatto: "You've been logged out.",
@@ -249,7 +259,7 @@
     try {
       if (modo === "login") {
         const r = await MiczyAuth.accedi(email, password);
-        if (r.ok) { chiudiModale(); avviso(t("benvenuto")); }
+        if (r.ok) { chiudiModale(); avviso(t("benvenuto")); proponiImportazione(); }
         else messaggioModale(errore(r.errore));
       } else if (modo === "signup") {
         const r = await MiczyAuth.registra(email, password);
@@ -258,7 +268,7 @@
           modo = "login"; disegnaModale();
           $("authPassword").value = "";
           messaggioModale(t("daConfermare"), "ok");
-        } else { chiudiModale(); avviso(t("benvenuto")); }
+        } else { chiudiModale(); avviso(t("benvenuto")); proponiImportazione(); }
       } else if (modo === "recupera") {
         const r = await MiczyAuth.recuperaPassword(email);
         if (r.ok) messaggioModale(t("recuperaInviato"), "ok");
@@ -350,6 +360,47 @@
     const d = new Date(iso);
     if (isNaN(d)) return "";
     return d.toLocaleDateString(linguaAttuale() === "en" ? "en-GB" : "it-IT", { day: "numeric", month: "short" });
+  }
+
+  // --- Chat fatta da ospite: dopo l'accesso si può salvare nell'account -------------------
+  function chatDaOspite() {
+    let lista;
+    try { lista = JSON.parse(localStorage.getItem("chatHistory") || "[]"); } catch (e) { return []; }
+    if (!Array.isArray(lista)) return [];
+    let msgs = lista.filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim());
+    msgs = msgs.slice(-40);
+    while (msgs.length && msgs[0].role !== "user") msgs.shift();
+    return msgs.some(m => m.role === "assistant") ? msgs.map(m => ({ role: m.role, content: m.content })) : [];
+  }
+
+  function proponiImportazione() {
+    const msgs = chatDaOspite();
+    if (!msgs.length || document.getElementById("importaBanner")) return;
+    const box = document.createElement("div");
+    box.id = "importaBanner"; box.className = "importa-banner"; box.setAttribute("role", "alertdialog"); box.setAttribute("aria-label", t("importaTesto"));
+    const p = document.createElement("p"); p.textContent = t("importaTesto");
+    const righe = document.createElement("div"); righe.className = "importa-azioni";
+    const si = document.createElement("button"); si.type = "button"; si.className = "importa-si"; si.textContent = t("importaSalva");
+    const no = document.createElement("button"); no.type = "button"; no.className = "importa-no"; no.textContent = t("importaNo");
+    righe.append(si, no); box.append(p, righe); document.body.appendChild(box);
+    si.focus();
+    const chiudi = () => box.remove();
+    no.addEventListener("click", chiudi);
+    box.addEventListener("keydown", e => { if (e.key === "Escape") chiudi(); });
+    si.addEventListener("click", async () => {
+      si.disabled = no.disabled = true;
+      const r = await MiczyAuth.backend("/chats/import", { metodo: "POST", corpo: { messages: msgs } });
+      if (r.ok && r.dati && r.dati.conversation_id) {
+        try { localStorage.removeItem("chatHistory"); } catch (e) { /* ignora */ }
+        chiudi();
+        await aggiornaElenco();
+        await apriChat(r.dati.conversation_id);
+        avviso(t("importaFatto"));
+      } else {
+        si.disabled = no.disabled = false;
+        avviso((r.dati && r.dati.response) || t("importaErrore"), true);
+      }
+    });
   }
 
   async function aggiornaElenco() {
