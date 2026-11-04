@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700..800&family=Instrument+Sans:wght@400..600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" type="image/png" href="miczy-favicon.png" />
+  <script src="preferenze.js"></script>
 </head>
 <body>
 
@@ -33,10 +34,22 @@
         </div>
       </div>
 
+      <button id="settingsBtn" type="button" aria-haspopup="dialog" aria-label="Impostazioni" title="Impostazioni">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.2"/>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
+        </svg>
+      </button>
+
       <label class="switch" for="toggleDark" aria-label="Attiva/disattiva modalità scura">
         <input type="checkbox" id="toggleDark" />
         <span class="slider"></span>
       </label>
+
+      <div id="temiWrap" class="temi-wrap">
+        <button id="temiBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Temi" title="Temi">+</button>
+        <div id="temiMenu" class="temi-menu" role="group" aria-label="Temi"></div>
+      </div>
 
       <div class="social-fab">
         <button id="fabToggle" type="button" aria-label="Apri social" aria-expanded="false">
@@ -176,6 +189,14 @@
     </div>
   </div>
 
+  <div id="setModal" class="cookie-modal set-modal" role="dialog" aria-modal="true" aria-labelledby="setTitolo">
+    <div class="set-head">
+      <h2 id="setTitolo">Impostazioni</h2>
+      <button id="setChiudi" class="set-x" type="button" aria-label="Chiudi">✕</button>
+    </div>
+    <div id="setCorpo" class="set-corpo"></div>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <!-- Script -->
@@ -189,6 +210,8 @@
   <script src="auth.js"></script>
   <script src="script.js"></script>
   <script src="account.js"></script>
+  <script src="temi.js"></script>
+  <script src="impostazioni.js"></script>
 
 
 </body>

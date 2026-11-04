@@ -318,6 +318,8 @@ function aggiornaLingua(lang) {
 
   if (langBtn) langBtn.textContent = lang === "it" ? "EN" : "IT";
   if (window.Account) window.Account.aggiornaTesti();
+  if (window.Impostazioni) window.Impostazioni.aggiornaTesti();
+  if (window.Temi) window.Temi.aggiornaTesti();
   document.querySelectorAll(".discord-btn").forEach(b => {
     b.title = messaggi[lang].discord;
     b.setAttribute("aria-label", messaggi[lang].discord);
@@ -494,13 +496,17 @@ function creaPulsanteDiscord(testo) {
   return btn;
 }
 
+// Icone scelte nelle impostazioni (con valori di riserva se le preferenze non ci sono)
+const iconaUtente = () => (window.Preferenze ? window.Preferenze.iconaUtente() : "👤");
+const iconaBot = () => (window.Preferenze ? window.Preferenze.iconaBot() : "🤖");
+
 function aggiungiMessaggio(testo, mittente, { salva = true, id = null, voto = 0 } = {}) {
   const wrapper = document.createElement("div");
   wrapper.className = `msg-wrapper ${mittente}`;
 
   const avatar = document.createElement("div");
   avatar.className = "avatar";
-  avatar.textContent = mittente === "ai" ? "🤖" : "👤";
+  avatar.textContent = mittente === "ai" ? iconaBot() : iconaUtente();
 
   const msg = document.createElement("div");
   msg.className = `msg ${mittente}`;
@@ -540,7 +546,7 @@ function aggiungiLoader() {
 
   const avatar = document.createElement("div");
   avatar.className = "avatar";
-  avatar.textContent = "🤖";
+  avatar.textContent = iconaBot();
 
   const loader = document.createElement("div");
   loader.className = "msg ai";
@@ -570,7 +576,7 @@ function scriviRispostaGraduale(testo, idMessaggio = null) {
 
   const avatar = document.createElement("div");
   avatar.className = "avatar";
-  avatar.textContent = "🤖";
+  avatar.textContent = iconaBot();
 
   const msg = document.createElement("div");
   msg.className = "msg ai";
@@ -607,7 +613,7 @@ function creaBollaAI() {
   wrapper.className = "msg-wrapper ai";
   const avatar = document.createElement("div");
   avatar.className = "avatar";
-  avatar.textContent = "🤖";
+  avatar.textContent = iconaBot();
   const msg = document.createElement("div");
   msg.className = "msg ai";
   wrapper.append(avatar, msg);
@@ -789,6 +795,8 @@ async function chiediRisposta({ mantieniDomanda = false } = {}) {
   try {
     const headers = { "Content-Type": "application/json" };
     const corpo = { messages: chatHistory.slice(-MAX_MESSAGGI_INVIATI), stream: true }; // niente payload infiniti
+    const lunghezza = window.Preferenze ? window.Preferenze.lunghezza() : "normale";
+    if (lunghezza !== "normale") corpo.length = lunghezza; // breve / lunga, scelta nelle impostazioni
 
     if (utenteLoggato()) {
       const token = await window.MiczyAuth.token();
