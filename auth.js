@@ -75,8 +75,8 @@
     if (codice === "invalid_credentials" || testo.includes("invalid login")) return "credenziali";
     if (codice === "email_not_confirmed" || testo.includes("not confirmed")) return "nonConfermata";
     if (codice === "user_already_exists" || testo.includes("already registered")) return "esiste";
+    if (codice === "same_password" || testo.includes("different from the old")) return "stessaPassword"; // prima di "debole": il testo contiene "password should"
     if (codice === "weak_password" || testo.includes("password should")) return "debole";
-    if (codice === "same_password" || testo.includes("different from the old")) return "stessaPassword";
     if (codice.includes("rate_limit") || r.stato === 429) return "troppi";
     if (codice === "signup_disabled") return "registrazioniChiuse";
     if (codice === "email_address_invalid" || testo.includes("valid email")) return "emailNonValida";
@@ -115,7 +115,26 @@
     return r.ok ? { ok: true } : { ok: false, errore: tipoErrore(r) };
   }
 
-  async function cambiaPassword(nuova) {
+  // Per cambiare la password serve quella attuale: la si verifica con un accesso prima di modificarla.
+  // (Chi non la ricorda usa recuperaPassword: arriva un link per email.)
+  async function cambiaPassword(nuova, attuale) {
+    const u = utente();
+    if (!u || !u.email) return { ok: false, errore: "sessione" };
+    if (typeof attuale !== "string" || !attuale) return { ok: false, errore: "attualeMancante" };
+    const v = await chiama("/auth/v1/token?grant_type=password", { metodo: "POST", corpo: { email: u.email, password: attuale } });
+    if (!v.ok || !v.dati || !v.dati.access_token) {
+      const e = tipoErrore(v);
+      return { ok: false, errore: e === "credenziali" ? "attualeErrata" : e };
+    }
+    impostaSessione(daRispostaToken(v.dati));
+    const t = await token();
+    if (!t) return { ok: false, errore: "sessione" };
+    const r = await chiama("/auth/v1/user", { metodo: "PUT", corpo: { password: nuova }, token: t });
+    return r.ok ? { ok: true } : { ok: false, errore: tipoErrore(r) };
+  }
+
+  // Solo per chi arriva dal link ricevuto per email (la prova di identità è il link): niente password attuale
+  async function impostaNuovaPassword(nuova) {
     const t = await token();
     if (!t) return { ok: false, errore: "sessione" };
     const r = await chiama("/auth/v1/user", { metodo: "PUT", corpo: { password: nuova }, token: t });
@@ -233,7 +252,7 @@
 
   window.MiczyAuth = {
     configurato, inizializza, utente, token, accedi, registra, recuperaPassword,
-    cambiaPassword, esci, rest, backend,
+    cambiaPassword, impostaNuovaPassword, esci, rest, backend,
     onCambio: f => ascoltatori.push(f)
   };
 })();

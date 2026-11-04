@@ -30,6 +30,10 @@
       invito: "Accedi per avere più impostazioni: scegli lo stile del sito, le icone tue e del bot, la dimensione del testo e la lunghezza delle risposte, e gestisci il tuo account (password, dati, eliminazione).",
       accedi: "Accedi",
       password: "Cambia password",
+      attualePassword: "Password attuale",
+      dimenticata: "Non ricordi la password attuale? Ricevi un link per email",
+      linkInviato: "Ti abbiamo scritto: apri il link nell'email per scegliere una nuova password.",
+      attualeMancante: "Scrivi la password attuale.",
       nuovaPassword: "Nuova password (almeno 8 caratteri)",
       ripetiPassword: "Ripeti la nuova password",
       salvaPassword: "Salva la password",
@@ -60,6 +64,7 @@
       sincAccount: "Le impostazioni sono salvate nel tuo account e ti seguono su ogni dispositivo.",
       carico: "Carico…",
       errori: {
+        attualeErrata: "La password attuale non è corretta.",
         debole: "Password troppo debole: scegline una più lunga.",
         stessaPassword: "La nuova password deve essere diversa da quella attuale.",
         troppi: "Troppi tentativi: riprova tra qualche minuto.",
@@ -90,6 +95,10 @@
       invito: "Sign in for more settings: pick the site style, your icon and the bot's, the text size and the answer length, and manage your account (password, data, deletion).",
       accedi: "Sign in",
       password: "Change password",
+      attualePassword: "Current password",
+      dimenticata: "Don't remember your current password? Get a link by email",
+      linkInviato: "We've emailed you: open the link in the message to choose a new password.",
+      attualeMancante: "Enter your current password.",
       nuovaPassword: "New password (at least 8 characters)",
       ripetiPassword: "Repeat the new password",
       salvaPassword: "Save password",
@@ -120,6 +129,7 @@
       sincAccount: "Settings are saved in your account and follow you on every device.",
       carico: "Loading…",
       errori: {
+        attualeErrata: "The current password is not correct.",
         debole: "Password too weak: choose a longer one.",
         stessaPassword: "The new password must be different from the current one.",
         troppi: "Too many attempts: try again in a few minutes.",
@@ -311,28 +321,44 @@
     const f = el("form", "set-form");
     f.noValidate = true;
     f.appendChild(el("span", "set-etichetta", t("password")));
+    const vecchia = campo("password", t("attualePassword"), "current-password");
     const a = campo("password", t("nuovaPassword"), "new-password");
     const b = campo("password", t("ripetiPassword"), "new-password");
     const msg = messaggio();
     const invia = el("button", "set-azione", t("salvaPassword"));
     invia.type = "submit";
-    f.append(a, b, msg, invia);
+    const link = el("button", "set-reset", t("dimenticata"));
+    link.type = "button";
+    f.append(vecchia, a, b, msg, invia, link);
 
     f.addEventListener("submit", async e => {
       e.preventDefault();
       mostra(msg, "");
+      if (!vecchia.value) return mostra(msg, t("attualeMancante"));
       if (a.value.length < 8) return mostra(msg, t("passwordCorta"));
       if (a.value !== b.value) return mostra(msg, t("passwordDiverse"));
       invia.disabled = true;
-      const r = await Auth.cambiaPassword(a.value);
+      const r = await Auth.cambiaPassword(a.value, vecchia.value);
       invia.disabled = false;
       if (r.ok) {
-        a.value = ""; b.value = "";
+        vecchia.value = ""; a.value = ""; b.value = "";
         mostra(msg, t("passwordFatta"), true);
       } else {
         const err = t("errori");
         mostra(msg, err[r.errore] || err.generico);
       }
+    });
+
+    // Password attuale dimenticata: link per email (Supabase lo manda all'indirizzo dell'account)
+    link.addEventListener("click", async () => {
+      mostra(msg, "");
+      const u = Auth.utente();
+      if (!u || !u.email) return;
+      link.disabled = true;
+      const r = await Auth.recuperaPassword(u.email);
+      link.disabled = false;
+      if (r.ok) mostra(msg, t("linkInviato"), true);
+      else { const err = t("errori"); mostra(msg, err[r.errore] || err.generico); }
     });
     return f;
   }

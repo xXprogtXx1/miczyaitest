@@ -264,7 +264,7 @@
         if (r.ok) messaggioModale(t("recuperaInviato"), "ok");
         else messaggioModale(errore(r.errore));
       } else if (modo === "nuovaPassword") {
-        const r = await MiczyAuth.cambiaPassword(password);
+        const r = await MiczyAuth.impostaNuovaPassword(password);
         if (r.ok) { chiudiModale(); avviso(t("passwordCambiata")); }
         else messaggioModale(errore(r.errore));
       }

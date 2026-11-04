@@ -1971,3 +1971,6 @@ body.dark-mode #temiBtn { background: var(--bar); }
 .temi-invito .temi-bloccati span { font-size: 0.8rem; padding: 0.15rem 0.5rem; border: 2px dashed var(--edge); border-radius: 999px; }
 .temi-invito .temi-accedi { justify-content: center; background: var(--yellow); color: #17141f; border-color: var(--edge); box-shadow: 3px 3px 0 var(--hard); }
 @media (max-width: 480px) { #temiBtn { height: 2rem; min-width: 2rem; padding: 0 0.4rem; font-size: 1.1rem; box-shadow: 2px 2px 0 var(--hard); } #temiBtn .temi-pallini i:not(:nth-child(2)) { display: none; } #temiBtn .temi-pallini i:nth-child(2) { margin-left: 0; width: 1rem; height: 1rem; } }
+.set-reset { align-self: flex-start; padding: 0.2rem 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: 0.85rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; text-align: left; }
+.set-reset:hover { color: var(--ink); background: var(--yellow); }
+.set-reset:disabled { opacity: 0.6; cursor: progress; }
