@@ -135,6 +135,7 @@ const messaggi = {
     discordConferma: "Vuoi inviare questa domanda e la risposta del bot al creatore di MiczyAI su Discord?",
     discordOk: "Inviato su Discord ✓",
     discordErrore: "Invio su Discord non riuscito. Riprova tra poco.",
+    discordAccedi: "Accedi per inviare un messaggio su Discord.",
     votoSu: "Mi è piaciuta",
     votoGiu: "Non mi è piaciuta",
     votoErrore: "Non sono riuscito a salvare il voto. Riprova.",
@@ -167,6 +168,7 @@ const messaggi = {
     discordConferma: "Do you want to send this question and the bot's answer to MiczyAI's creator on Discord?",
     discordOk: "Sent to Discord ✓",
     discordErrore: "Sending to Discord failed. Please try again shortly.",
+    discordAccedi: "Sign in to send a message to Discord.",
     votoSu: "I liked it",
     votoGiu: "I didn't like it",
     votoErrore: "I couldn't save your vote. Please try again.",
@@ -422,7 +424,7 @@ function creaRigaMeta(testo, idMessaggio, voto) {
   const riga = document.createElement("div");
   riga.className = "msg-meta";
   riga.appendChild(creaPulsanteCopia(testo));
-  riga.appendChild(creaPulsanteDiscord(testo));
+  if (utenteLoggato()) riga.appendChild(creaPulsanteDiscord(testo)); // solo per chi ha un account
   if (idMessaggio && utenteLoggato()) riga.appendChild(creaPulsantiVoto(idMessaggio, voto));
   return riga;
 }
@@ -463,9 +465,11 @@ function creaPulsanteDiscord(testo) {
     btn.dataset.stato = "invio";
     btn.textContent = "…";
     try {
+      const token = window.MiczyAuth ? await window.MiczyAuth.token() : null;
+      if (!token) throw new Error(messaggi[lingua].discordAccedi);
       const response = await fetch(SHARE_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ question: domanda, answer: testo }),
         signal: window.AbortSignal && AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined
       });
@@ -520,7 +524,7 @@ function aggiungiMessaggio(testo, mittente, { salva = true, id = null, voto = 0 
   bottomRow.className = "msg-meta";
   if (mittente === "ai") {
     bottomRow.appendChild(creaPulsanteCopia(testo));
-    bottomRow.appendChild(creaPulsanteDiscord(testo));
+    if (utenteLoggato()) bottomRow.appendChild(creaPulsanteDiscord(testo)); // solo per chi ha un account
     if (id && utenteLoggato()) bottomRow.appendChild(creaPulsantiVoto(id, voto));
   }
   msg.appendChild(bottomRow);
