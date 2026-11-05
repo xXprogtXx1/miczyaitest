@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700..800&family=Instrument+Sans:wght@400..600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="modi.css" />
   <link rel="icon" type="image/png" href="miczy-favicon.png" />
   <script src="preferenze.js"></script>
 </head>
@@ -123,6 +124,7 @@
     <p id="quotaOspite" class="quota-ospite" role="status" aria-live="polite" hidden></p>
 
     <div class="composer">
+      <div id="cmdMenu" class="cmd-menu" role="listbox" aria-label="Comandi" hidden></div>
       <div class="chat-controls">
         <button id="chatsBtn" class="chats-btn" type="button" aria-label="Le mie chat" title="Le mie chat" hidden>
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -213,6 +215,7 @@
   <script src="script.js"></script>
   <script src="account.js"></script>
   <script src="ospite.js"></script>
+  <script src="comandi.js"></script>
   <script src="temi.js"></script>
   <script src="impostazioni.js"></script>
 

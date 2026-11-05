@@ -699,6 +699,11 @@ let inAttesa = false;
 
 async function talkToMiczy() {
   const input = inputField.value.trim();
+  // i comandi (/hacker, /bubble...) li gestisce il sito: non arrivano mai al bot
+  if (input && window.Comandi && window.Comandi.gestisci(input)) {
+    if (inputField.value.trim() === input) inputField.value = ""; // (/aiuto lascia un "/" per aprire l'elenco)
+    return;
+  }
   if (!input || inAttesa) return;
 
   rimuoviRigenera();

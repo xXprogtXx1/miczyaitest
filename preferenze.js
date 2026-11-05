@@ -8,13 +8,14 @@
 
   // Tutto ciò che si può scegliere. Ogni valore letto da fuori (storage, account) viene controllato qui.
   const OPZIONI = {
+    modo: ["normale", "hacker", "bubble", "crt", "pixel", "neon", "pergamena"],
     stile: ["miczy", "menta", "tramonto", "oceano", "carta", "hacker", "alieno", "arcobaleno", "oro", "sakura", "spazio"],
     testo: ["piccolo", "normale", "grande", "enorme"],
     lunghezza: ["breve", "normale", "lunga"],
     iconaUtente: ["👤", "😎", "🐱", "🦊", "🐼", "🐸", "🦄", "👾", "🧑‍🚀", "🎮"],
     iconaBot: ["🤖", "👽", "🧠", "🔮", "🐙", "🦉", "⚡", "👻", "🛸", "🎲"]
   };
-  const PREDEFINITE = { stile: "miczy", testo: "normale", lunghezza: "normale", iconaUtente: "👤", iconaBot: "🤖" };
+  const PREDEFINITE = { modo: "normale", stile: "miczy", testo: "normale", lunghezza: "normale", iconaUtente: "👤", iconaBot: "🤖" };
   const SCALA_TESTO = { piccolo: "87.5%", normale: "100%", grande: "112.5%", enorme: "125%" };
 
   let valori = Object.assign({}, PREDEFINITE);
@@ -40,6 +41,7 @@
   function applica() {
     const html = document.documentElement;
     html.setAttribute("data-stile", valori.stile);
+    html.setAttribute("data-modo", valori.modo);
     html.style.fontSize = SCALA_TESTO[valori.testo];
     // icone: anche sui messaggi già scritti
     if (document.body) {
