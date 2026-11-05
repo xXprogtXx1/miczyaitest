@@ -1250,7 +1250,6 @@ body.dark-mode .auth-msg.ok { color: var(--mint); }
   .account-btn.loggato { width: 2rem; padding: 0; }
   .chats-btn { height: 2.5rem; width: 2.5rem; }
   .chats-panel { top: 2.4rem; }
-  .account-menu { right: -3rem; }
 }
 
 /* Avviso in cima al sito (deciso dal pannello admin) */

@@ -290,6 +290,14 @@
     const wrap = $("accountWrap");
     wrap.classList.toggle("open", aperto);
     $("accountBtn").setAttribute("aria-expanded", String(aperto));
+    if (aperto) {
+      // il menu resta sempre dentro lo schermo, anche quando il pulsante è vicino a un bordo
+      const menu = wrap.querySelector(".account-menu");
+      menu.style.right = "0"; menu.style.left = "auto";
+      const r = menu.getBoundingClientRect(), larg = document.documentElement.clientWidth;
+      if (r.left < 8) menu.style.right = (r.left - 8) + "px";
+      else if (r.right > larg - 8) menu.style.right = (r.right - larg + 8) + "px";
+    }
   }
 
   function aggiornaInterfaccia() {
