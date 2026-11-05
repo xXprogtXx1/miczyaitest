@@ -710,9 +710,12 @@ async function talkToMiczy() {
   aggiungiMessaggio(input, "utente");
   chatHistory.push({ role: "user", content: input });
 
+  inputField.value = ""; // il campo si svuota subito, come in ogni chat
   const riuscito = await chiediRisposta();
-  if (riuscito) inputField.value = ""; // in caso di errore il testo non si perde
-  else aggiornaRigenera();
+  if (!riuscito) {
+    if (!inputField.value) inputField.value = input; // errore: il testo si rimette nel campo, non va perso
+    aggiornaRigenera();
+  }
 }
 
 // Pulsante "rigenera": nuova risposta alla stessa domanda.
