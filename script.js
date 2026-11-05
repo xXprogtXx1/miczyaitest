@@ -790,6 +790,8 @@ async function chiediRisposta({ mantieniDomanda = false } = {}) {
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_RICHIESTA_MS);
+  // se il server si sta ancora svegliando (la chiamata all'apertura non ha risposto), lo si dice subito
+  const attesaAvvio = window.Sveglia && window.Sveglia.inCorso() ? 600 : MESSAGGIO_AVVIO_MS;
   const avvioId = setTimeout(() => {
     const loader = document.querySelector("#loader .msg");
     if (loader && !loader.querySelector(".avvio-msg")) {
@@ -798,7 +800,7 @@ async function chiediRisposta({ mantieniDomanda = false } = {}) {
       nota.textContent = messaggi[lingua].avvio;
       loader.appendChild(nota);
     }
-  }, MESSAGGIO_AVVIO_MS);
+  }, attesaAvvio);
 
   let riuscito = false;
 
