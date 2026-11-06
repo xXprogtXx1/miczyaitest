@@ -7,5 +7,5 @@ window.MICZY_CONFIG = {
   backendUrl: "https://backend-miczy-ai.onrender.com",
   // Chiave PUBBLICA di Cloudflare Turnstile (il CAPTCHA). Vuota = CAPTCHA spento.
   // Quella segreta NON va qui: si mette solo in Supabase (Authentication -> Attack Protection).
-  turnstileSiteKey: ""
+  turnstileSiteKey: "0x4AAAAAAF2g6OfGwlkRowwz"
 };
