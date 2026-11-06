@@ -135,6 +135,13 @@
     .scelte label:has(input:checked) { background: var(--sel); color: #17141f; }
 
     /* Messaggi cercati e chat */
+    .badge { display: inline-block; min-width: 1.3rem; margin-left: 0.25rem; padding: 0 0.4rem; border-radius: 999px; background: var(--pink); color: #17141f; font-size: 0.75rem; font-weight: 800; text-align: center; }
+    .richiesta { margin: 0 0 0.7rem; padding: 0.7rem 0.9rem; border: 2px solid var(--edge); border-radius: 0.8rem; background: var(--row); font-size: 0.88rem; overflow-wrap: anywhere; }
+    .richiesta .chi { font-weight: 800; }
+    .richiesta .quando { color: var(--muted); font-size: 0.78rem; }
+    .richiesta q { display: block; margin: 0.4rem 0; padding: 0.4rem 0.6rem; border-left: 4px solid var(--pink); quotes: none; white-space: pre-wrap; }
+    .richiesta .fondo { margin-top: 0.5rem; }
+    .stato-ric { display: inline-block; padding: 0 0.5rem; border: 2px solid var(--edge); border-radius: 999px; font-size: 0.74rem; font-weight: 800; }
     .chat-log { list-style: none; margin: 0.5rem 0 0; padding: 0; }
     .chat-log li { margin-bottom: 0.5rem; padding: 0.5rem 0.7rem; border: 2px solid var(--edge); border-radius: 0.7rem; background: var(--row); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.86rem; }
     .chat-log li.user { background: #fff3b0; color: #17141f; }
@@ -171,8 +178,10 @@
           <div class="tabs" role="tablist" aria-label="Sezioni del pannello">
             <button class="tab" role="tab" id="tab-panoramica" aria-controls="sez-panoramica" aria-selected="true" data-tab="panoramica">📊 Panoramica</button>
             <button class="tab" role="tab" id="tab-utenti" aria-controls="sez-utenti" aria-selected="false" data-tab="utenti">👥 Utenti</button>
+            <button class="tab" role="tab" id="tab-accessi" aria-controls="sez-accessi" aria-selected="false" data-tab="accessi">🕒 Accessi</button>
             <button class="tab" role="tab" id="tab-messaggi" aria-controls="sez-messaggi" aria-selected="false" data-tab="messaggi">🔎 Messaggi</button>
             <button class="tab" role="tab" id="tab-feedback" aria-controls="sez-feedback" aria-selected="false" data-tab="feedback">👍 Feedback</button>
+            <button class="tab" role="tab" id="tab-richieste" aria-controls="sez-richieste" aria-selected="false" data-tab="richieste">🗑️ Richieste <span class="badge" id="badgeRic" hidden></span></button>
             <button class="tab" role="tab" id="tab-sito" aria-controls="sez-sito" aria-selected="false" data-tab="sito">⚙️ Sito</button>
             <button class="tab" role="tab" id="tab-registro" aria-controls="sez-registro" aria-selected="false" data-tab="registro">📜 Registro</button>
           </div>
@@ -255,6 +264,24 @@
             <p id="vuoto" class="msg" hidden>Nessun utente trovato.</p>
           </section>
 
+          <!-- ACCESSI -->
+          <section class="pannello-tab" id="sez-accessi" role="tabpanel" aria-labelledby="tab-accessi" hidden>
+            <form id="cercaAccForm" class="cerca">
+              <input id="cercaAcc" type="search" placeholder="Cerca per email…" maxlength="100" aria-label="Cerca per email" />
+              <button class="btn" type="submit">Cerca</button>
+              <button class="btn" type="button" id="aggiornaAcc">↻ Aggiorna</button>
+            </form>
+            <p class="nota" style="margin:-.3rem 0 .6rem">Ordinati dall'accesso più recente. Si vedono data e browser, mai l'indirizzo IP.</p>
+            <div id="erroriAcc" class="msg err" hidden></div>
+            <div class="tabella">
+              <table>
+                <thead><tr><th>Utente</th><th>Ultimo accesso</th><th>Dispositivo</th><th class="num">Sessioni</th></tr></thead>
+                <tbody id="righeAcc"></tbody>
+              </table>
+            </div>
+            <p id="vuotoAcc" class="msg" hidden>Nessun utente trovato.</p>
+          </section>
+
           <!-- MESSAGGI -->
           <section class="pannello-tab" id="sez-messaggi" role="tabpanel" aria-labelledby="tab-messaggi" hidden>
             <form id="cercaMsgForm" class="cerca">
@@ -279,6 +306,18 @@
               <div class="seg" id="segFb" role="group" aria-label="Filtro voti"></div>
             </div>
             <div id="listaFb"></div>
+          </section>
+
+          <!-- RICHIESTE DI CANCELLAZIONE -->
+          <section class="pannello-tab" id="sez-richieste" role="tabpanel" aria-labelledby="tab-richieste" hidden>
+            <div class="titolo-sez">
+              <h2>Persone che vogliono eliminare l'account</h2>
+              <button class="btn" type="button" id="aggiornaRic">↻ Aggiorna</button>
+            </div>
+            <div id="erroriRic" class="msg err" hidden></div>
+            <div id="listaRic"></div>
+            <div class="titolo-sez"><h2>Già gestite</h2></div>
+            <div id="listaRicChiuse"></div>
           </section>
 
           <!-- SITO -->

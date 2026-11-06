@@ -879,6 +879,173 @@
   caricatori.feedback = caricaFeedback;
   $("aggiornaFb").addEventListener("click", caricaFeedback);
 
+
+  // ===========================================================================
+  // Accessi: ultimo accesso e dispositivo
+  // ===========================================================================
+  function descriviDispositivo(ua) {
+    if (!ua) return "—";
+    const u = String(ua);
+    const os = /iPhone|iPad|iOS/.test(u) ? "iOS" : /Android/.test(u) ? "Android" : /Windows/.test(u) ? "Windows"
+      : /Mac OS X|Macintosh/.test(u) ? "macOS" : /CrOS/.test(u) ? "ChromeOS" : /Linux/.test(u) ? "Linux" : "";
+    const br = /Edg\//.test(u) ? "Edge" : /OPR\/|Opera/.test(u) ? "Opera" : /Firefox\//.test(u) ? "Firefox"
+      : /Chrome\//.test(u) ? "Chrome" : /Safari\//.test(u) ? "Safari" : "";
+    const tipo = /Mobile|iPhone|Android.*Mobile/.test(u) ? "telefono" : /iPad|Tablet/.test(u) ? "tablet" : "computer";
+    const parti = [br, os].filter(Boolean).join(" su ");
+    return (parti || "Sconosciuto") + " · " + tipo;
+  }
+
+  async function caricaAccessi() {
+    const q = $("cercaAcc").value.trim();
+    const r = await backendPaziente("/admin/access?limit=100" + (q ? "&q=" + encodeURIComponent(q) : ""));
+    if (!r.ok) { mostraErrore($("erroriAcc"), erroreDa(r)); giaCaricate.accessi = false; return; }
+    stato("");
+    mostraErrore($("erroriAcc"), "");
+    const lista = (r.dati && r.dati.users) || [];
+    const corpo = $("righeAcc");
+    corpo.textContent = "";
+    $("vuotoAcc").hidden = lista.length > 0;
+    lista.forEach(u => {
+      const tr = document.createElement("tr");
+      const td1 = document.createElement("td");
+      td1.appendChild(el("b", "", u.email || "—"));
+      td1.appendChild(el("small", "sub", "Iscritto " + dataLeggibile(u.created_at)));
+      const td2 = document.createElement("td");
+      td2.textContent = u.last_sign_in_at ? dataLeggibile(u.last_sign_in_at) : "Mai";
+      const td3 = document.createElement("td");
+      td3.textContent = descriviDispositivo(u.user_agent);
+      if (u.user_agent) td3.title = u.user_agent;
+      const td4 = document.createElement("td");
+      td4.className = "num"; td4.textContent = String(u.sessions || 0);
+      tr.append(td1, td2, td3, td4);
+      corpo.appendChild(tr);
+    });
+  }
+  caricatori.accessi = caricaAccessi;
+  $("aggiornaAcc").addEventListener("click", caricaAccessi);
+  $("cercaAccForm").addEventListener("submit", e => { e.preventDefault(); caricaAccessi(); });
+
+
+  // ===========================================================================
+  // Richieste di cancellazione account
+  // ===========================================================================
+  const NOMI_STATO_RIC = { approved: "✅ Approvata", rejected: "✋ Rifiutata", cancelled: "↩︎ Ritirata" };
+
+  function aggiornaBadgeRichieste(n) {
+    const b = $("badgeRic");
+    b.hidden = !n;
+    b.textContent = String(n || "");
+  }
+
+  function disegnaRichiesta(x, inAttesa) {
+    const box = el("div", "richiesta");
+    const testa = el("div");
+    testa.appendChild(el("span", "chi", x.email || "(email non salvata)"));
+    testa.appendChild(el("span", "quando", " · " + dataLeggibile(x.created_at)));
+    if (!inAttesa) testa.appendChild(el("span", "stato-ric", NOMI_STATO_RIC[x.status] || String(x.status || "")));
+    box.appendChild(testa);
+    const motivo = el("q"); motivo.textContent = String(x.reason || "");   // testo semplice, mai HTML
+    box.appendChild(motivo);
+    if (!inAttesa) {
+      const chi = x.decided_by ? " da " + x.decided_by : "";
+      box.appendChild(el("div", "quando", (x.decided_at ? dataLeggibile(x.decided_at) : "") + chi));
+      if (x.admin_note) box.appendChild(el("div", "", "Nota: " + x.admin_note));
+      return box;
+    }
+    const f = el("div", "fondo");
+    const rifiuta = el("button", "btn", "Rifiuta"); rifiuta.type = "button";
+    const approva = el("button", "btn rosso", "Approva ed elimina…"); approva.type = "button";
+    rifiuta.addEventListener("click", () => apriRifiuto(x));
+    approva.addEventListener("click", () => apriApprovazione(x));
+    f.append(rifiuta, approva);
+    box.appendChild(f);
+    return box;
+  }
+
+  function dopoDecisione() {
+    chiudiScheda();
+    caricaRichieste();
+    caricaUtenti();
+    giaCaricate.registro = false;
+    giaCaricate.panoramica = false;
+  }
+
+  function campoNota() {
+    const nota = document.createElement("textarea");
+    nota.maxLength = 300; nota.rows = 3;
+    return nota;
+  }
+
+  // Si scrive l'email della persona per confermare (come per l'eliminazione dalla lista utenti)
+  function apriApprovazione(x) {
+    const form = el("form", "form");
+    const attesa = (x.email || "").trim();
+    form.appendChild(el("h2", "", "Elimina l'account di " + (x.email || "questa persona")));
+    form.appendChild(el("p", "msg err", "Attenzione: account, chat e messaggi vengono cancellati per sempre. Non si può annullare."));
+    form.appendChild(el("p", "", "Per confermare scrivi qui sotto: " + attesa));
+    const conferma = document.createElement("input");
+    conferma.type = "text"; conferma.autocomplete = "off"; conferma.spellcheck = false;
+    form.appendChild(etichetta("Conferma", conferma));
+    const nota = campoNota();
+    form.appendChild(etichetta("Nota per il registro (facoltativa)", nota));
+    const err = el("p", "msg err"); err.hidden = true;
+    form.appendChild(err);
+    const { f, ok } = bottoniFondo("Elimina per sempre", "rosso");
+    ok.disabled = true;
+    form.appendChild(f);
+    conferma.addEventListener("input", () => { ok.disabled = conferma.value.trim().toLowerCase() !== attesa.toLowerCase(); });
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      ok.disabled = true;
+      const r = await MiczyAuth.backend("/admin/deletion-requests/decide", {
+        metodo: "POST", corpo: { id: x.id, approve: true, confirm_email: conferma.value.trim(), note: nota.value.trim() || undefined }
+      });
+      if (r.ok) dopoDecisione();
+      else { err.textContent = erroreDa(r); err.hidden = false; ok.disabled = false; }
+    });
+    apriScheda(form);
+    conferma.focus();
+  }
+
+  function apriRifiuto(x) {
+    const form = el("form", "form");
+    form.appendChild(el("h2", "", "Rifiuta la richiesta di " + (x.email || "questa persona")));
+    form.appendChild(el("p", "", "L'account resta com'è. Se vuoi, scrivi un messaggio: la persona lo vedrà nelle sue impostazioni."));
+    const nota = campoNota();
+    form.appendChild(etichetta("Messaggio (facoltativo)", nota));
+    const err = el("p", "msg err"); err.hidden = true;
+    form.appendChild(err);
+    const { f, ok } = bottoniFondo("Rifiuta la richiesta");
+    form.appendChild(f);
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      ok.disabled = true;
+      const r = await MiczyAuth.backend("/admin/deletion-requests/decide", {
+        metodo: "POST", corpo: { id: x.id, approve: false, note: nota.value.trim() || undefined }
+      });
+      if (r.ok) dopoDecisione();
+      else { err.textContent = erroreDa(r); err.hidden = false; ok.disabled = false; }
+    });
+    apriScheda(form);
+    nota.focus();
+  }
+
+  async function caricaRichieste() {
+    const r = await backendPaziente("/admin/deletion-requests");
+    if (!r.ok) { mostraErrore($("erroriRic"), erroreDa(r)); giaCaricate.richieste = false; return; }
+    mostraErrore($("erroriRic"), "");
+    const attesa = (r.dati && r.dati.pending) || [], chiuse = (r.dati && r.dati.decided) || [];
+    aggiornaBadgeRichieste(attesa.length);
+    const a = $("listaRic"), c = $("listaRicChiuse");
+    a.textContent = ""; c.textContent = "";
+    if (!attesa.length) a.appendChild(el("p", "msg", "Nessuna richiesta in attesa."));
+    attesa.forEach(x => a.appendChild(disegnaRichiesta(x, true)));
+    if (!chiuse.length) c.appendChild(el("p", "msg", "Ancora niente."));
+    chiuse.forEach(x => c.appendChild(disegnaRichiesta(x, false)));
+  }
+  caricatori.richieste = caricaRichieste;
+  $("aggiornaRic").addEventListener("click", caricaRichieste);
+
   // ===========================================================================
   // Registro
   // ===========================================================================
@@ -886,6 +1053,7 @@
     ban: "Sospensione", unban: "Riattivazione", limit: "Limite utente", delete_user: "Account eliminato",
     "settings:maintenance": "Manutenzione", "settings:banner": "Avviso", "settings:limits": "Limiti del sito",
     "settings:personality": "Personalità",
+    deletion_approved: "Eliminazione approvata", deletion_rejected: "Eliminazione rifiutata",
   };
 
   async function caricaRegistro() {
@@ -930,6 +1098,8 @@
     $("pannello").hidden = false;
     stato("Caricamento…");
     apriTab("panoramica");
+    giaCaricate.richieste = true;
+    caricaRichieste();   // per il numero sul distintivo della scheda
   }
 
   MiczyAuth.onCambio(u => { if (!u) location.reload(); });
