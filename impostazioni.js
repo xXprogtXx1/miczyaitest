@@ -68,6 +68,7 @@
         debole: "Password troppo debole: scegline una più lunga.",
         stessaPassword: "La nuova password deve essere diversa da quella attuale.",
         troppi: "Troppi tentativi: riprova tra qualche minuto.",
+        captcha: "Verifica anti-bot non riuscita. Ricarica la pagina e riprova.",
         rete: "Non riesco a connettermi: controlla la rete e riprova.",
         sessione: "Sessione scaduta: accedi di nuovo.",
         generico: "Qualcosa è andato storto. Riprova."
@@ -133,6 +134,7 @@
         debole: "Password too weak: choose a longer one.",
         stessaPassword: "The new password must be different from the current one.",
         troppi: "Too many attempts: try again in a few minutes.",
+        captcha: "Anti-bot check failed. Reload the page and try again.",
         rete: "I can't connect: check your network and try again.",
         sessione: "Session expired: sign in again.",
         generico: "Something went wrong. Try again."
@@ -329,7 +331,17 @@
     invia.type = "submit";
     const link = el("button", "set-reset", t("dimenticata"));
     link.type = "button";
-    f.append(vecchia, a, b, msg, invia, link);
+    const capBox = el("div", "captcha-box");
+    capBox.hidden = !(window.Captcha && Captcha.attivo());
+    f.append(vecchia, a);
+    if (window.ForzaPassword) ForzaPassword.monta(a, () => (Auth.utente() || {}).email || "");
+    f.append(b, capBox, msg, invia, link);
+    const cap = window.Captcha ? Captcha.monta(capBox) : null;
+    const prendiToken = async () => {
+      if (!cap) return { ok: true, token: undefined };
+      const tk = await cap.token();
+      return tk ? { ok: true, token: tk } : { ok: false };
+    };
 
     f.addEventListener("submit", async e => {
       e.preventDefault();
@@ -338,7 +350,10 @@
       if (a.value.length < 8) return mostra(msg, t("passwordCorta"));
       if (a.value !== b.value) return mostra(msg, t("passwordDiverse"));
       invia.disabled = true;
-      const r = await Auth.cambiaPassword(a.value, vecchia.value);
+      const tk = await prendiToken();
+      if (!tk.ok) { invia.disabled = false; cap.reset(); return mostra(msg, t("errori").captcha); }
+      const r = await Auth.cambiaPassword(a.value, vecchia.value, tk.token);
+      if (cap) cap.reset();
       invia.disabled = false;
       if (r.ok) {
         vecchia.value = ""; a.value = ""; b.value = "";
@@ -355,7 +370,10 @@
       const u = Auth.utente();
       if (!u || !u.email) return;
       link.disabled = true;
-      const r = await Auth.recuperaPassword(u.email);
+      const tk = await prendiToken();
+      if (!tk.ok) { link.disabled = false; cap.reset(); return mostra(msg, t("errori").captcha); }
+      const r = await Auth.recuperaPassword(u.email, tk.token);
+      if (cap) cap.reset();
       link.disabled = false;
       if (r.ok) mostra(msg, t("linkInviato"), true);
       else { const err = t("errori"); mostra(msg, err[r.errore] || err.generico); }

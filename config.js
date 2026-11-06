@@ -3,6 +3,9 @@
 // La chiave "secret"/"service_role" NON va mai messa qui (sta solo su Render).
 window.MICZY_CONFIG = {
   supabaseUrl: "https://ebasldivbriybigsjoge.supabase.co",
-  supabaseAnonKey: "sb_publishable_Sk1ccestdCarPoQKYDK9Cg_ViF1jUHy",
-  backendUrl: "https://backend-miczy-ai.onrender.com"
+  supabaseAnonKey: "INCOLLA_QUI_LA_CHIAVE_PUBLISHABLE",
+  backendUrl: "https://backend-miczy-ai.onrender.com",
+  // Chiave PUBBLICA di Cloudflare Turnstile (il CAPTCHA). Vuota = CAPTCHA spento.
+  // Quella segreta NON va qui: si mette solo in Supabase (Authentication -> Attack Protection).
+  turnstileSiteKey: ""
 };

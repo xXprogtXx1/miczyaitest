@@ -187,6 +187,7 @@
         <label id="authPassLabel"><span id="authPassText">Password</span>
           <input id="authPassword" type="password" autocomplete="current-password" />
         </label>
+        <div id="authCaptcha" class="captcha-box" hidden></div>
         <p id="authMsg" class="auth-msg" role="alert"></p>
         <button id="authSubmit" type="submit">Accedi</button>
         <button id="authForgot" class="auth-link" type="button">Password dimenticata?</button>
@@ -212,6 +213,8 @@
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.14/dist/purify.min.js"
           integrity="sha384-46dPGH1XlTmj7bc50bqLjTdORXs/3EP2QpA/6EWbelYWOY9VGp+87RT61S3Mcslb"
           crossorigin="anonymous"></script>
+  <script src="captcha.js"></script>
+  <script src="forza.js"></script>
   <script src="auth.js"></script>
   <script src="script.js"></script>
   <script src="account.js"></script>

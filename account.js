@@ -74,6 +74,7 @@
         debole: "Password troppo debole: usa almeno 8 caratteri.",
         stessaPassword: "La nuova password deve essere diversa dalla vecchia.",
         troppi: "Troppi tentativi: aspetta un po' e riprova.",
+        captcha: "Verifica anti-bot non riuscita. Ricarica la pagina e riprova.",
         registrazioniChiuse: "Le registrazioni sono chiuse al momento.",
         emailNonValida: "Questo indirizzo email non sembra valido.",
         linkScaduto: "Il link è scaduto: richiedine uno nuovo.",
@@ -155,6 +156,7 @@
         debole: "Password too weak: use at least 8 characters.",
         stessaPassword: "The new password must be different from the old one.",
         troppi: "Too many attempts: wait a bit and try again.",
+        captcha: "Anti-bot check failed. Reload the page and try again.",
         registrazioniChiuse: "Sign-ups are closed right now.",
         emailNonValida: "This email address doesn't look valid.",
         linkScaduto: "The link has expired: request a new one.",
@@ -176,6 +178,7 @@
   };
 
   const $ = id => document.getElementById(id);
+  let captcha = null, forza = null;
   let modo = "login";           // login | signup | recupera | nuovaPassword
   let datiMe = null;            // risposta di /me
   let elencoChat = [];
@@ -222,6 +225,15 @@
     $("authForgot").textContent = recupera ? t("tornaLogin") : t("dimenticata");
     $("authForgot").hidden = signup || nuova;
     $("authClose").textContent = t("chiudi");
+
+    // CAPTCHA: serve per accedere, registrarsi e chiedere il link; non per la nuova password dal link
+    const serveCaptcha = window.Captcha && Captcha.attivo() && !nuova;
+    $("authCaptcha").hidden = !serveCaptcha;
+    if (serveCaptcha && !captcha) captcha = Captcha.monta($("authCaptcha"));
+
+    // Barra di sicurezza della password quando se ne sta creando una
+    if (window.ForzaPassword && !forza) forza = ForzaPassword.monta($("authPassword"), () => $("authEmail").value, () => modo === "signup" || modo === "nuovaPassword");
+    if (forza) forza.aggiorna();
   }
 
   function apriModale(nuovoModo = "login", testo = "", tipo = "") {
@@ -230,6 +242,7 @@
     disegnaModale();
     messaggioModale(testo, tipo);
     $("authModal").classList.add("show");
+    if (captcha) captcha.reset();
     setTimeout(() => ($(modo === "nuovaPassword" ? "authPassword" : "authEmail")).focus(), 50);
   }
 
@@ -256,13 +269,23 @@
     bottone.textContent = t("attendi");
     messaggioModale("");
 
+    // token CAPTCHA (solo se attivo e se serve in questa modalità)
+    let cap;
+    if (captcha && modo !== "nuovaPassword") {
+      cap = await captcha.token();
+      if (!cap) {
+        bottone.disabled = false; bottone.textContent = testoBottone; captcha.reset();
+        return messaggioModale(errore("captcha"));
+      }
+    }
+
     try {
       if (modo === "login") {
-        const r = await MiczyAuth.accedi(email, password);
+        const r = await MiczyAuth.accedi(email, password, cap);
         if (r.ok) { chiudiModale(); avviso(t("benvenuto")); proponiImportazione(); }
         else messaggioModale(errore(r.errore));
       } else if (modo === "signup") {
-        const r = await MiczyAuth.registra(email, password);
+        const r = await MiczyAuth.registra(email, password, cap);
         if (!r.ok) messaggioModale(errore(r.errore));
         else if (r.daConfermare) {
           modo = "login"; disegnaModale();
@@ -270,7 +293,7 @@
           messaggioModale(t("daConfermare"), "ok");
         } else { chiudiModale(); avviso(t("benvenuto")); proponiImportazione(); }
       } else if (modo === "recupera") {
-        const r = await MiczyAuth.recuperaPassword(email);
+        const r = await MiczyAuth.recuperaPassword(email, cap);
         if (r.ok) messaggioModale(t("recuperaInviato"), "ok");
         else messaggioModale(errore(r.errore));
       } else if (modo === "nuovaPassword") {
@@ -279,6 +302,7 @@
         else messaggioModale(errore(r.errore));
       }
     } finally {
+      if (captcha) captcha.reset();   // ogni token vale una volta sola
       bottone.disabled = false;
       if (bottone.textContent === t("attendi")) bottone.textContent = testoBottone;
       disegnaModale();

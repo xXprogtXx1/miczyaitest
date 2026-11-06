@@ -2004,3 +2004,19 @@ body.dark-mode #temiBtn { background: var(--bar); }
 
 /* schermi molto stretti: gli strumenti dell'intestazione vanno a capo invece di uscire dallo schermo */
 @media (max-width: 400px) { .header-tools { flex-wrap: wrap; justify-content: flex-end; max-width: 100%; row-gap: 0.4rem; } }
+
+/* ---- Barra di sicurezza della password e CAPTCHA ---- */
+.forza { margin: -0.15rem 0 0.1rem; }
+.forza[hidden] { display: none; }
+.forza-barra { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.forza-barra span { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--muted) 30%, transparent); transition: background 0.2s; }
+.forza[data-livello="0"] .forza-barra span.on { background: #d6264f; }
+.forza[data-livello="1"] .forza-barra span.on { background: #e8602c; }
+.forza[data-livello="2"] .forza-barra span.on { background: #e0a100; }
+.forza[data-livello="3"] .forza-barra span.on { background: #6aae1f; }
+.forza[data-livello="4"] .forza-barra span.on { background: #12a35a; }
+.forza-testo { margin: 0.25rem 0 0; font-size: 0.78rem; font-weight: 500; color: var(--muted); min-height: 1.1em; }
+.forza-testo b { color: var(--text, inherit); }
+.captcha-box { display: flex; justify-content: center; }
+.captcha-box[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .forza-barra span { transition: none; } }

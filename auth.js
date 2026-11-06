@@ -72,6 +72,7 @@
     const codice = String(d.error_code || d.error || "").toLowerCase();
     const testo = String(d.msg || d.message || d.error_description || "").toLowerCase();
     if (r.stato === 0) return "rete";
+    if (codice === "captcha_failed" || testo.includes("captcha")) return "captcha";
     if (codice === "invalid_credentials" || testo.includes("invalid login")) return "credenziali";
     if (codice === "email_not_confirmed" || testo.includes("not confirmed")) return "nonConfermata";
     if (codice === "user_already_exists" || testo.includes("already registered")) return "esiste";
@@ -86,9 +87,13 @@
   // --- Funzioni pubbliche -------------------------------------------------------
   const utente = () => (sessione && sessione.user) || null;
 
-  async function accedi(email, password) {
+  // Se c'è un token CAPTCHA lo si allega nel formato che Supabase Auth si aspetta.
+  const conCaptcha = (corpo, captcha) =>
+    captcha ? Object.assign({}, corpo, { gotrue_meta_security: { captcha_token: captcha } }) : corpo;
+
+  async function accedi(email, password, captcha) {
     if (!configurato()) return { ok: false, errore: "nonConfigurato" };
-    const r = await chiama("/auth/v1/token?grant_type=password", { metodo: "POST", corpo: { email, password } });
+    const r = await chiama("/auth/v1/token?grant_type=password", { metodo: "POST", corpo: conCaptcha({ email, password }, captcha) });
     if (r.ok && r.dati && r.dati.access_token) {
       impostaSessione(daRispostaToken(r.dati));
       return { ok: true };
@@ -96,11 +101,11 @@
     return { ok: false, errore: tipoErrore(r) };
   }
 
-  async function registra(email, password) {
+  async function registra(email, password, captcha) {
     if (!configurato()) return { ok: false, errore: "nonConfigurato" };
     // Dopo il click nell'email si torna alla pagina "confermato/" di questo sito
     const dopo = encodeURIComponent(location.origin + location.pathname.replace(/[^/]*$/, "") + "confermato/");
-    const r = await chiama("/auth/v1/signup?redirect_to=" + dopo, { metodo: "POST", corpo: { email, password } });
+    const r = await chiama("/auth/v1/signup?redirect_to=" + dopo, { metodo: "POST", corpo: conCaptcha({ email, password }, captcha) });
     if (!r.ok) return { ok: false, errore: tipoErrore(r) };
     if (r.dati && r.dati.access_token) {            // conferma email disattivata: si è già dentro
       impostaSessione(daRispostaToken(r.dati));
@@ -109,19 +114,19 @@
     return { ok: true, daConfermare: true };        // arriva un'email con il link di conferma
   }
 
-  async function recuperaPassword(email) {
+  async function recuperaPassword(email, captcha) {
     if (!configurato()) return { ok: false, errore: "nonConfigurato" };
-    const r = await chiama("/auth/v1/recover", { metodo: "POST", corpo: { email } });
+    const r = await chiama("/auth/v1/recover", { metodo: "POST", corpo: conCaptcha({ email }, captcha) });
     return r.ok ? { ok: true } : { ok: false, errore: tipoErrore(r) };
   }
 
   // Per cambiare la password serve quella attuale: la si verifica con un accesso prima di modificarla.
   // (Chi non la ricorda usa recuperaPassword: arriva un link per email.)
-  async function cambiaPassword(nuova, attuale) {
+  async function cambiaPassword(nuova, attuale, captcha) {
     const u = utente();
     if (!u || !u.email) return { ok: false, errore: "sessione" };
     if (typeof attuale !== "string" || !attuale) return { ok: false, errore: "attualeMancante" };
-    const v = await chiama("/auth/v1/token?grant_type=password", { metodo: "POST", corpo: { email: u.email, password: attuale } });
+    const v = await chiama("/auth/v1/token?grant_type=password", { metodo: "POST", corpo: conCaptcha({ email: u.email, password: attuale }, captcha) });
     if (!v.ok || !v.dati || !v.dati.access_token) {
       const e = tipoErrore(v);
       return { ok: false, errore: e === "credenziali" ? "attualeErrata" : e };
