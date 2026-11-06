@@ -26,8 +26,10 @@
           ["Link di condivisione", "Solo se condividi una chat", "Mostrare quella chat, in sola lettura, a chi ha il link."],
           ["Impostazioni dell'account", "Solo se sei loggato", "Ricordare stile, icone, dimensione del testo e lunghezza delle risposte."],
           ["Conteggio messaggi e uso dell'IA", "Ogni richiesta", "Applicare i limiti di utilizzo e controllare i costi. Si registra quanti messaggi e quanti token, non il testo."],
+          ["Ultimo accesso e browser", "Quando accedi con un account", "Sicurezza: il gestore può vedere la data dell'ultimo accesso, quante sessioni hai aperte e il tipo di browser o dispositivo, per accorgersi di accessi anomali. Non vede il tuo indirizzo IP."],
           ["Indirizzo IP", "Ogni richiesta", "Limitare gli abusi da parte degli ospiti. Resta nella memoria del server per poco tempo e non viene salvato nel database."],
           ["Richiesta di cancellazione", "Solo se chiedi di eliminare l'account", "Gestire la tua richiesta: motivo, email, esito. Questo registro resta anche dopo la cancellazione."],
+          ["Ultimo accesso e browser", "Quando fai login", "Sicurezza dell'account: il gestore vede la data dell'ultimo accesso e il tipo di browser, mai l'indirizzo IP. Li conserva il servizio di accesso."],
           ["Registro delle azioni del gestore", "Quando il gestore modifica un account", "Tenere traccia di blocchi, limiti e cancellazioni, per sicurezza e correttezza."]
         ]}},
         { nota: "I messaggi sono testo libero: **non scrivere password, documenti, dati di salute o altre informazioni riservate**, tue o di altre persone.", titolo: "Attenzione." }
@@ -122,8 +124,10 @@
           ["Share links", "Only if you share a chat", "To show that chat, read-only, to whoever has the link."],
           ["Account settings", "Only when signed in", "To remember style, icons, text size and answer length."],
           ["Message count and AI usage", "Every request", "To apply usage limits and control costs. We log how many messages and tokens, not the text."],
+          ["Last sign-in and browser", "When you sign in with an account", "Security: the operator can see the date of your last sign-in, how many sessions you have open and the browser or device type, to spot unusual access. The operator does not see your IP address."],
           ["IP address", "Every request", "To limit abuse by guests. It stays in server memory for a short time and is not saved in the database."],
           ["Deletion request", "Only if you ask to delete your account", "To handle your request: reason, email, outcome. This record is kept even after deletion."],
+          ["Last sign-in and browser", "When you sign in", "Account security: the operator sees the date of your last sign-in and the browser type, never the IP address. Kept by the sign-in service."],
           ["Operator action log", "When the operator changes an account", "To keep track of blocks, limits and deletions, for security and fairness."]
         ]}},
         { nota: "Messages are free text: **do not write passwords, documents, health data or other confidential information**, yours or anyone else's.", titolo: "Careful." }
