@@ -116,7 +116,9 @@
 
   async function recuperaPassword(email, captcha) {
     if (!configurato()) return { ok: false, errore: "nonConfigurato" };
-    const r = await chiama("/auth/v1/recover", { metodo: "POST", corpo: conCaptcha({ email }, captcha) });
+    // Il link nell'email deve tornare a QUESTO sito (non alla "Site URL" di Supabase, che può puntare altrove e dare 404)
+    const dopo = encodeURIComponent(location.origin + location.pathname.replace(/[^/]*$/, ""));
+    const r = await chiama("/auth/v1/recover?redirect_to=" + dopo, { metodo: "POST", corpo: conCaptcha({ email }, captcha) });
     return r.ok ? { ok: true } : { ok: false, errore: tipoErrore(r) };
   }
 
