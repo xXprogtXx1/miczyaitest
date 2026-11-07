@@ -62,6 +62,12 @@
       ticketChiuso: "Chiuso",
       rispostaTitolo: "Risposta",
       inAttesaRisposta: "In attesa di risposta.",
+      tu: "Tu",
+      staff: "Assistenza",
+      scriviRisposta: "Scrivi un messaggio…",
+      invia: "Invia",
+      messaggioVuoto: "Scrivi qualcosa prima di inviare.",
+      ticketChiusoNota: "Ticket chiuso. Se ti serve ancora aiuto, aprine uno nuovo.",
       emailNonValida: "Questo indirizzo email non sembra valido.",
       stessaEmail: "È già la tua email attuale.",
       esiste: "Esiste già un account con questa email.",
@@ -156,6 +162,12 @@
       ticketChiuso: "Closed",
       rispostaTitolo: "Reply",
       inAttesaRisposta: "Waiting for a reply.",
+      tu: "You",
+      staff: "Support",
+      scriviRisposta: "Write a message…",
+      invia: "Send",
+      messaggioVuoto: "Write something before sending.",
+      ticketChiusoNota: "Ticket closed. If you still need help, open a new one.",
       emailNonValida: "This email address doesn't look valid.",
       stessaEmail: "That's already your current email.",
       esiste: "An account with this email already exists.",
@@ -706,20 +718,60 @@
     elenco.appendChild(el("p", "set-aiuto", t("carico")));
     s.append(titolo, elenco);
 
+    function bolla(autore, testo, data) {
+      const b = el("div", "set-casella");
+      b.appendChild(el("span", null, (autore === "admin" ? t("staff") : t("tu")) + " · " + dataLeggibile(data)));
+      b.appendChild(el("q", null, String(testo || "")));   // testo semplice, mai HTML
+      if (autore === "admin") b.style.borderStyle = "dashed";
+      return b;
+    }
+
     function disegnaElenco(lista) {
+      const aperti = new Set();
+      elenco.querySelectorAll("details[open]").forEach(d => aperti.add(d.dataset.id));
       elenco.replaceChildren();
       if (!lista.length) return elenco.appendChild(el("p", "set-aiuto", t("nessunTicket")));
       lista.forEach(x => {
-        const c = el("div", "set-casella");
-        const testa = el("strong", null, "#" + x.id + " · " + String(x.subject || ""));
+        const c = el("details", "set-casella");
+        c.dataset.id = String(x.id);
+        if (aperti.has(String(x.id)) || lista.length === 1 || (x.status !== "closed" && x.last_author === "admin")) c.open = true;
+        const testa = el("summary", null, "#" + x.id + " · " + String(x.subject || ""));
+        testa.style.fontWeight = "800"; testa.style.cursor = "pointer";
         c.appendChild(testa);
-        c.appendChild(el("span", null, (x.status === "closed" ? t("ticketChiuso") : t("ticketAperto")) + " · " + dataLeggibile(x.created_at)));
-        c.appendChild(el("q", null, String(x.message || "")));
-        if (x.reply) {
-          c.appendChild(el("span", null, t("rispostaTitolo") + ":"));
-          c.appendChild(el("q", null, String(x.reply)));
-        } else if (x.status !== "closed") {
-          c.appendChild(el("span", null, t("inAttesaRisposta")));
+        const attesa = x.status !== "closed" && x.last_author !== "admin";
+        c.appendChild(el("span", null, (x.status === "closed" ? t("ticketChiuso") : t("ticketAperto")) + " · " + dataLeggibile(x.created_at)
+          + (attesa ? " · " + t("inAttesaRisposta") : "")));
+        c.appendChild(bolla("user", x.message, x.created_at));
+        (x.messages || []).forEach(m => c.appendChild(bolla(m.author, m.body, m.created_at)));
+        if (x.status === "closed") {
+          c.appendChild(el("p", "set-aiuto", t("ticketChiusoNota")));
+        } else {
+          const fr = el("form", "set-form");
+          fr.noValidate = true;
+          const area = el("textarea");
+          area.maxLength = 2000; area.rows = 3;
+          area.setAttribute("aria-label", t("scriviRisposta"));
+          area.placeholder = t("scriviRisposta");
+          const m2 = messaggio();
+          const inv = el("button", "set-azione", t("invia"));
+          inv.type = "submit";
+          fr.append(area, m2, inv);
+          fr.addEventListener("submit", async e => {
+            e.preventDefault();
+            mostra(m2, "");
+            if (!area.value.trim()) return mostra(m2, t("messaggioVuoto"));
+            inv.disabled = true;
+            const r = await Auth.backend("/tickets/" + encodeURIComponent(x.id) + "/messages", { metodo: "POST", corpo: { body: area.value.trim() } });
+            inv.disabled = false;
+            if (r.ok) { area.value = ""; carica(); }
+            else if (r.stato === 401 && window.Account) window.Account.sessioneScaduta();
+            else {
+              mostra(m2, r.stato === 0 ? t("errori").rete
+                : (r.dati && typeof r.dati.response === "string" && r.dati.response) ? r.dati.response : t("errori").generico);
+              if (r.stato === 409) carica();
+            }
+          });
+          c.appendChild(fr);
         }
         elenco.appendChild(c);
       });
