@@ -1066,16 +1066,18 @@
     const sotto = el("div", "quando");
     sotto.textContent = (x.email || "(email non salvata)") + " · " + (CATEGORIE_TK[x.category] || x.category) + " · " + dataLeggibile(x.created_at) + " · ";
     sotto.appendChild(el("span", "stato-ric", x.status === "closed" ? "✅ Chiuso" : "🟡 Aperto"));
+    if (x.status !== "closed" && x.last_author !== "admin") sotto.appendChild(el("span", "stato-ric", "💬 Tocca a te"));
     box.appendChild(sotto);
-    const msg = el("q"); msg.textContent = String(x.message || "");   // testo semplice, mai HTML
-    box.appendChild(msg);
-    if (x.reply) {
-      const r = el("q"); r.style.borderLeftColor = "var(--cyan)";
-      r.textContent = "Risposta" + (x.replied_by ? " (" + x.replied_by + ")" : "") + ": " + x.reply;
-      box.appendChild(r);
-    }
+    const scrivi = (autore, testo, quando) => {
+      const q = el("q");   // testo semplice, mai HTML
+      q.textContent = (autore === "admin" ? "Tu" : "Utente") + " · " + dataLeggibile(quando) + "\n" + String(testo || "");
+      if (autore === "admin") q.style.borderLeftColor = "var(--cyan)";
+      box.appendChild(q);
+    };
+    scrivi("user", x.message, x.created_at);
+    (x.messages || []).forEach(m => scrivi(m.author, m.body, m.created_at));
     const f = el("div", "fondo");
-    const rispondi = el("button", "btn", x.reply ? "Modifica la risposta…" : "Rispondi…"); rispondi.type = "button";
+    const rispondi = el("button", "btn", "Rispondi…"); rispondi.type = "button";
     const stato2 = el("button", "btn", x.status === "closed" ? "Riapri" : "Chiudi"); stato2.type = "button";
     rispondi.addEventListener("click", () => apriRisposta(x));
     stato2.addEventListener("click", async () => {
@@ -1092,17 +1094,18 @@
   function apriRisposta(x) {
     const form = el("form", "form");
     form.appendChild(el("h2", "", "Rispondi a #" + x.id));
-    const dom = el("q"); dom.textContent = String(x.message || ""); dom.style.display = "block";
+    const ultimo = (x.messages || []).filter(m => m.author === "user").pop();
+    const dom = el("q"); dom.textContent = String(ultimo ? ultimo.body : x.message || ""); dom.style.display = "block";
     form.appendChild(dom);
-    form.appendChild(el("p", "nota", "L'utente vedrà la risposta nelle sue Impostazioni, sotto Assistenza. Non riceve un'email."));
+    form.appendChild(el("p", "nota", "L'utente vede la risposta nelle sue Impostazioni, sotto Assistenza, e può risponderti finché il ticket è aperto. Non riceve un'email."));
     const testo = document.createElement("textarea");
-    testo.maxLength = 2000; testo.rows = 6; testo.value = x.reply || "";
+    testo.maxLength = 2000; testo.rows = 6;
     form.appendChild(etichetta("La tua risposta", testo));
     const chiudi = document.createElement("input");
-    chiudi.type = "checkbox"; chiudi.checked = x.status !== "closed";
-    const riga = el("label", "", " Chiudi il ticket dopo la risposta");
+    chiudi.type = "checkbox"; chiudi.checked = false;
+    const riga = el("label", "", " Chiudi il ticket dopo la risposta (l'utente non potrà più rispondere)");
     riga.prepend(chiudi);
-    form.appendChild(riga);
+    if (x.status !== "closed") form.appendChild(riga);
     const err = el("p", "msg err"); err.hidden = true;
     form.appendChild(err);
     const { f, ok } = bottoniFondo("Invia la risposta");
