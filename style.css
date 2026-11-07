@@ -1570,12 +1570,12 @@ body.dark-mode #settingsBtn { background: var(--bar); }
 .set-anteprima .msg { transform: none; }
 
 .set-form { display: flex; flex-direction: column; gap: 0.5rem; }
-.set-form input, .set-form textarea {
+.set-form input, .set-form textarea, .set-form select {
   padding: 0.55rem 0.8rem; border: var(--stroke) solid var(--edge); border-radius: 0.8rem;
   background: var(--field); color: var(--ink); font: inherit; font-weight: 400;
 }
 .set-form textarea { min-height: 5.5rem; resize: vertical; }
-.set-form input:focus, .set-form textarea:focus, .set-seg button:focus-visible, .set-icone button:focus-visible, .set-x:focus-visible, .set-azione:focus-visible {
+.set-form input:focus, .set-form textarea:focus, .set-form select:focus, .set-seg button:focus-visible, .set-icone button:focus-visible, .set-x:focus-visible, .set-azione:focus-visible {
   outline: 3px solid var(--cyan); outline-offset: 2px;
 }
 .set-azione {

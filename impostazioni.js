@@ -44,6 +44,24 @@
       nuovaEmail: "Nuova email",
       salvaEmail: "Cambia email",
       emailInviata: "Ti abbiamo scritto: apri il link nell'email per confermare. Finché non confermi, resta valida l'email attuale.",
+      assistenza: "Assistenza",
+      aiutoAssistenza: "Hai un problema o un'idea? Scrivici una email oppure apri un ticket: ti rispondiamo qui, nelle Impostazioni.",
+      scriviEmail: "Scrivici una email",
+      apriTicket: "Apri un ticket",
+      categoria: "Argomento",
+      categorie: { account: "Account e accesso", chat: "Chat e risposte", bug: "Qualcosa non funziona", idea: "Un'idea", altro: "Altro" },
+      oggetto: "Oggetto",
+      descrivi: "Descrivi cosa succede (almeno 10 caratteri)",
+      inviaTicket: "Invia il ticket",
+      ticketInviato: "Ticket inviato! Troverai la risposta qui sotto.",
+      oggettoCorto: "Scrivi un oggetto (almeno 3 caratteri).",
+      messaggioCorto: "Descrivi il problema (almeno 10 caratteri).",
+      iTuoiTicket: "I tuoi ticket",
+      nessunTicket: "Non hai ancora aperto ticket.",
+      ticketAperto: "Aperto",
+      ticketChiuso: "Chiuso",
+      rispostaTitolo: "Risposta",
+      inAttesaRisposta: "In attesa di risposta.",
       emailNonValida: "Questo indirizzo email non sembra valido.",
       stessaEmail: "È già la tua email attuale.",
       esiste: "Esiste già un account con questa email.",
@@ -120,6 +138,24 @@
       nuovaEmail: "New email",
       salvaEmail: "Change email",
       emailInviata: "We've emailed you: open the link in the message to confirm. Until you do, your current email stays valid.",
+      assistenza: "Support",
+      aiutoAssistenza: "Got a problem or an idea? Email us or open a ticket: we'll reply here, in Settings.",
+      scriviEmail: "Email us",
+      apriTicket: "Open a ticket",
+      categoria: "Topic",
+      categorie: { account: "Account and sign-in", chat: "Chat and answers", bug: "Something is broken", idea: "An idea", altro: "Other" },
+      oggetto: "Subject",
+      descrivi: "Describe what happens (at least 10 characters)",
+      inviaTicket: "Send the ticket",
+      ticketInviato: "Ticket sent! You'll find the reply below.",
+      oggettoCorto: "Write a subject (at least 3 characters).",
+      messaggioCorto: "Describe the problem (at least 10 characters).",
+      iTuoiTicket: "Your tickets",
+      nessunTicket: "You haven't opened any tickets yet.",
+      ticketAperto: "Open",
+      ticketChiuso: "Closed",
+      rispostaTitolo: "Reply",
+      inAttesaRisposta: "Waiting for a reply.",
       emailNonValida: "This email address doesn't look valid.",
       stessaEmail: "That's already your current email.",
       esiste: "An account with this email already exists.",
@@ -633,6 +669,91 @@
     return s;
   }
 
+  // --- Assistenza: email o ticket, con le risposte
+  function sezioneAssistenza() {
+    const s = sezione(t("assistenza"));
+    s.appendChild(el("p", "set-aiuto", t("aiutoAssistenza")));
+    const cfg = window.MICZY_CONFIG || {};
+    const indirizzo = String(cfg.supportEmail || "").trim();
+    if (/^[^\s@<>"]+@[^\s@<>"]+$/.test(indirizzo)) {
+      const a = el("a", "set-azione secondaria", t("scriviEmail"));
+      a.href = "mailto:" + indirizzo + "?subject=" + encodeURIComponent("Assistenza MiczyAI");
+      a.style.display = "inline-block"; a.style.textDecoration = "none"; a.style.marginBottom = "0.9rem";
+      s.appendChild(a);
+    }
+
+    const f = el("form", "set-form");
+    f.noValidate = true;
+    f.appendChild(el("span", "set-etichetta", t("apriTicket")));
+    const cat = el("select");
+    cat.setAttribute("aria-label", t("categoria"));
+    Object.keys(t("categorie")).forEach(k => { const o = el("option", null, t("categorie")[k]); o.value = k; cat.appendChild(o); });
+    const ogg = campo("text", t("oggetto"), "off");
+    ogg.maxLength = 100;
+    const testo = el("textarea");
+    testo.maxLength = 2000; testo.rows = 5;
+    testo.setAttribute("aria-label", t("descrivi"));
+    testo.placeholder = t("descrivi");
+    const msg = messaggio();
+    const invia = el("button", "set-azione", t("inviaTicket"));
+    invia.type = "submit";
+    f.append(cat, ogg, testo, msg, invia);
+    s.appendChild(f);
+
+    const titolo = el("span", "set-etichetta", t("iTuoiTicket"));
+    titolo.style.display = "block"; titolo.style.marginTop = "1.1rem";
+    const elenco = el("div", "set-form");
+    elenco.appendChild(el("p", "set-aiuto", t("carico")));
+    s.append(titolo, elenco);
+
+    function disegnaElenco(lista) {
+      elenco.replaceChildren();
+      if (!lista.length) return elenco.appendChild(el("p", "set-aiuto", t("nessunTicket")));
+      lista.forEach(x => {
+        const c = el("div", "set-casella");
+        const testa = el("strong", null, "#" + x.id + " · " + String(x.subject || ""));
+        c.appendChild(testa);
+        c.appendChild(el("span", null, (x.status === "closed" ? t("ticketChiuso") : t("ticketAperto")) + " · " + dataLeggibile(x.created_at)));
+        c.appendChild(el("q", null, String(x.message || "")));
+        if (x.reply) {
+          c.appendChild(el("span", null, t("rispostaTitolo") + ":"));
+          c.appendChild(el("q", null, String(x.reply)));
+        } else if (x.status !== "closed") {
+          c.appendChild(el("span", null, t("inAttesaRisposta")));
+        }
+        elenco.appendChild(c);
+      });
+    }
+    async function carica() {
+      const r = await Auth.backend("/tickets");
+      if (r.ok && r.dati && Array.isArray(r.dati.tickets)) disegnaElenco(r.dati.tickets);
+      else if (r.stato === 401 && window.Account) window.Account.sessioneScaduta();
+      else { elenco.replaceChildren(); elenco.appendChild(el("p", "set-aiuto", t("nessunTicket"))); }
+    }
+
+    f.addEventListener("submit", async e => {
+      e.preventDefault();
+      mostra(msg, "");
+      if (ogg.value.trim().length < 3) return mostra(msg, t("oggettoCorto"));
+      if (testo.value.trim().length < 10) return mostra(msg, t("messaggioCorto"));
+      invia.disabled = true;
+      const r = await Auth.backend("/tickets", { metodo: "POST", corpo: { category: cat.value, subject: ogg.value.trim(), message: testo.value.trim() } });
+      invia.disabled = false;
+      if (r.ok) {
+        ogg.value = ""; testo.value = "";
+        mostra(msg, t("ticketInviato"), true);
+        carica();
+      } else if (r.stato === 401 && window.Account) {
+        window.Account.sessioneScaduta();
+      } else {
+        mostra(msg, r.stato === 0 ? t("errori").rete
+          : (r.dati && typeof r.dati.response === "string" && r.dati.response) ? r.dati.response : t("errori").generico);
+      }
+    });
+    carica();
+    return s;
+  }
+
   // Per chi non ha un account: niente impostazioni, solo un invito ad accedere
   function sezioneInvito() {
     const s = sezione(t("invitoTitolo"));
@@ -673,7 +794,7 @@
   function disegna() {
     controlli = [];
     const corpo = $("setCorpo");
-    if (loggato()) corpo.replaceChildren(sezioneAspetto(), sezioneRisposte(), sezioneAccount(), piede());
+    if (loggato()) corpo.replaceChildren(sezioneAspetto(), sezioneRisposte(), sezioneAccount(), sezioneAssistenza(), piede());
     else corpo.replaceChildren(sezioneInvito());
     $("setTitolo").textContent = t("titolo");
     $("setChiudi").setAttribute("aria-label", t("chiudi"));
