@@ -75,7 +75,7 @@
     if (codice === "captcha_failed" || testo.includes("captcha")) return "captcha";
     if (codice === "invalid_credentials" || testo.includes("invalid login")) return "credenziali";
     if (codice === "email_not_confirmed" || testo.includes("not confirmed")) return "nonConfermata";
-    if (codice === "user_already_exists" || testo.includes("already registered")) return "esiste";
+    if (codice === "user_already_exists" || codice === "email_exists" || testo.includes("already registered") || testo.includes("already been registered")) return "esiste";
     if (codice === "same_password" || testo.includes("different from the old")) return "stessaPassword"; // prima di "debole": il testo contiene "password should"
     if (codice === "weak_password" || testo.includes("password should")) return "debole";
     if (codice.includes("rate_limit") || r.stato === 429) return "troppi";
@@ -137,6 +137,28 @@
     const t = await token();
     if (!t) return { ok: false, errore: "sessione" };
     const r = await chiama("/auth/v1/user", { metodo: "PUT", corpo: { password: nuova }, token: t });
+    return r.ok ? { ok: true } : { ok: false, errore: tipoErrore(r) };
+  }
+
+  // Cambio email: serve la password attuale. Supabase manda un link di conferma (all'indirizzo nuovo, e se
+  // "Secure email change" è attivo anche al vecchio): l'email dell'account cambia solo dopo il click.
+  async function cambiaEmail(nuova, attuale, captcha) {
+    const u = utente();
+    if (!u || !u.email) return { ok: false, errore: "sessione" };
+    if (typeof attuale !== "string" || !attuale) return { ok: false, errore: "attualeMancante" };
+    const e = String(nuova || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)) return { ok: false, errore: "emailNonValida" };
+    if (e === String(u.email).toLowerCase()) return { ok: false, errore: "stessaEmail" };
+    const v = await chiama("/auth/v1/token?grant_type=password", { metodo: "POST", corpo: conCaptcha({ email: u.email, password: attuale }, captcha) });
+    if (!v.ok || !v.dati || !v.dati.access_token) {
+      const er = tipoErrore(v);
+      return { ok: false, errore: er === "credenziali" ? "attualeErrata" : er };
+    }
+    impostaSessione(daRispostaToken(v.dati));
+    const t = await token();
+    if (!t) return { ok: false, errore: "sessione" };
+    const dopo = encodeURIComponent(location.origin + location.pathname.replace(/[^/]*$/, "") + "confermato/");
+    const r = await chiama("/auth/v1/user?redirect_to=" + dopo, { metodo: "PUT", corpo: { email: e }, token: t });
     return r.ok ? { ok: true } : { ok: false, errore: tipoErrore(r) };
   }
 
@@ -259,7 +281,7 @@
 
   window.MiczyAuth = {
     configurato, inizializza, utente, token, accedi, registra, recuperaPassword,
-    cambiaPassword, impostaNuovaPassword, esci, rest, backend,
+    cambiaPassword, cambiaEmail, impostaNuovaPassword, esci, rest, backend,
     onCambio: f => ascoltatori.push(f)
   };
 })();

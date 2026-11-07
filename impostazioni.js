@@ -40,6 +40,13 @@
       passwordCorta: "La password deve avere almeno 8 caratteri.",
       passwordDiverse: "Le due password non coincidono.",
       passwordFatta: "Password aggiornata.",
+      cambiaEmail: "Cambia email",
+      nuovaEmail: "Nuova email",
+      salvaEmail: "Cambia email",
+      emailInviata: "Ti abbiamo scritto: apri il link nell'email per confermare. Finché non confermi, resta valida l'email attuale.",
+      emailNonValida: "Questo indirizzo email non sembra valido.",
+      stessaEmail: "È già la tua email attuale.",
+      esiste: "Esiste già un account con questa email.",
       dati: "I tuoi dati",
       aiutoDati: "Scarica un file con le tue chat, i messaggi, i voti alle risposte e le impostazioni.",
       scarica: "Scarica i miei dati",
@@ -65,6 +72,9 @@
       carico: "Carico…",
       errori: {
         attualeErrata: "La password attuale non è corretta.",
+        emailNonValida: "Questo indirizzo email non sembra valido.",
+        stessaEmail: "È già la tua email attuale.",
+        esiste: "Esiste già un account con questa email.",
         debole: "Password troppo debole: scegline una più lunga.",
         stessaPassword: "La nuova password deve essere diversa da quella attuale.",
         troppi: "Troppi tentativi: riprova tra qualche minuto.",
@@ -106,6 +116,13 @@
       passwordCorta: "The password must be at least 8 characters long.",
       passwordDiverse: "The two passwords don't match.",
       passwordFatta: "Password updated.",
+      cambiaEmail: "Change email",
+      nuovaEmail: "New email",
+      salvaEmail: "Change email",
+      emailInviata: "We've emailed you: open the link in the message to confirm. Until you do, your current email stays valid.",
+      emailNonValida: "This email address doesn't look valid.",
+      stessaEmail: "That's already your current email.",
+      esiste: "An account with this email already exists.",
       dati: "Your data",
       aiutoDati: "Download a file with your chats, messages, answer ratings and settings.",
       scarica: "Download my data",
@@ -131,6 +148,9 @@
       carico: "Loading…",
       errori: {
         attualeErrata: "The current password is not correct.",
+        emailNonValida: "This email address doesn't look valid.",
+        stessaEmail: "That's already your current email.",
+        esiste: "An account with this email already exists.",
         debole: "Password too weak: choose a longer one.",
         stessaPassword: "The new password must be different from the current one.",
         troppi: "Too many attempts: try again in a few minutes.",
@@ -316,6 +336,42 @@
     }));
     s.appendChild(el("p", "set-aiuto", t("aiutoLunghezza")));
     return s;
+  }
+
+  // --- Cambio email
+  function formEmail() {
+    const f = el("form", "set-form");
+    f.noValidate = true;
+    f.appendChild(el("span", "set-etichetta", t("cambiaEmail")));
+    const nuova = campo("email", t("nuovaEmail"), "email");
+    nuova.inputMode = "email";
+    const vecchia = campo("password", t("attualePassword"), "current-password");
+    const msg = messaggio();
+    const invia = el("button", "set-azione", t("salvaEmail"));
+    invia.type = "submit";
+    const capBox = el("div", "captcha-box");
+    capBox.hidden = !(window.Captcha && Captcha.attivo());
+    f.append(nuova, vecchia, capBox, msg, invia);
+    const cap = window.Captcha ? Captcha.monta(capBox) : null;
+
+    f.addEventListener("submit", async e => {
+      e.preventDefault();
+      mostra(msg, "");
+      if (!nuova.value.trim()) return mostra(msg, t("errori").emailNonValida);
+      if (!vecchia.value) return mostra(msg, t("attualeMancante"));
+      invia.disabled = true;
+      let token;
+      if (cap) {
+        token = await cap.token();
+        if (!token) { invia.disabled = false; cap.reset(); return mostra(msg, t("errori").captcha); }
+      }
+      const r = await Auth.cambiaEmail(nuova.value, vecchia.value, token);
+      if (cap) cap.reset();
+      invia.disabled = false;
+      if (r.ok) { vecchia.value = ""; nuova.value = ""; mostra(msg, t("emailInviata"), true); }
+      else { const err = t("errori"); mostra(msg, err[r.errore] || err.generico); }
+    });
+    return f;
   }
 
   // --- Cambio password
@@ -571,7 +627,7 @@
   function sezioneAccount() {
     const s = sezione(t("account"));
     s.appendChild(el("p", "set-aiuto", Auth.utente().email || ""));
-    const blocchi = [formPassword(), boxDati(), boxElimina()];
+    const blocchi = [formEmail(), formPassword(), boxDati(), boxElimina()];
     blocchi.forEach(b => { b.style.marginBottom = "1.1rem"; s.appendChild(b); });
     s.lastChild.style.marginBottom = "0";
     return s;
