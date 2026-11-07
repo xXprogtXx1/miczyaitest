@@ -1047,13 +1047,112 @@
   $("aggiornaRic").addEventListener("click", caricaRichieste);
 
   // ===========================================================================
+  // Ticket di assistenza
+  // ===========================================================================
+  const CATEGORIE_TK = { account: "Account", chat: "Chat", bug: "Problema", idea: "Idea", altro: "Altro" };
+  let tkFiltro = "open";
+
+  function aggiornaBadgeTicket(n) {
+    const b = $("badgeTk");
+    b.hidden = !n;
+    b.textContent = String(n || "");
+  }
+
+  function disegnaTicket(x) {
+    const box = el("div", "richiesta");
+    const testa = el("div");
+    testa.appendChild(el("span", "chi", "#" + x.id + " · " + (x.subject || "")));
+    box.appendChild(testa);
+    const sotto = el("div", "quando");
+    sotto.textContent = (x.email || "(email non salvata)") + " · " + (CATEGORIE_TK[x.category] || x.category) + " · " + dataLeggibile(x.created_at) + " · ";
+    sotto.appendChild(el("span", "stato-ric", x.status === "closed" ? "✅ Chiuso" : "🟡 Aperto"));
+    box.appendChild(sotto);
+    const msg = el("q"); msg.textContent = String(x.message || "");   // testo semplice, mai HTML
+    box.appendChild(msg);
+    if (x.reply) {
+      const r = el("q"); r.style.borderLeftColor = "var(--cyan)";
+      r.textContent = "Risposta" + (x.replied_by ? " (" + x.replied_by + ")" : "") + ": " + x.reply;
+      box.appendChild(r);
+    }
+    const f = el("div", "fondo");
+    const rispondi = el("button", "btn", x.reply ? "Modifica la risposta…" : "Rispondi…"); rispondi.type = "button";
+    const stato2 = el("button", "btn", x.status === "closed" ? "Riapri" : "Chiudi"); stato2.type = "button";
+    rispondi.addEventListener("click", () => apriRisposta(x));
+    stato2.addEventListener("click", async () => {
+      stato2.disabled = true;
+      const r = await MiczyAuth.backend("/admin/tickets/update", { metodo: "POST", corpo: { id: x.id, status: x.status === "closed" ? "open" : "closed" } });
+      if (r.ok) { caricaTicket(); giaCaricate.registro = false; }
+      else { mostraErrore($("erroriTk"), erroreDa(r)); stato2.disabled = false; }
+    });
+    f.append(rispondi, stato2);
+    box.appendChild(f);
+    return box;
+  }
+
+  function apriRisposta(x) {
+    const form = el("form", "form");
+    form.appendChild(el("h2", "", "Rispondi a #" + x.id));
+    const dom = el("q"); dom.textContent = String(x.message || ""); dom.style.display = "block";
+    form.appendChild(dom);
+    form.appendChild(el("p", "nota", "L'utente vedrà la risposta nelle sue Impostazioni, sotto Assistenza. Non riceve un'email."));
+    const testo = document.createElement("textarea");
+    testo.maxLength = 2000; testo.rows = 6; testo.value = x.reply || "";
+    form.appendChild(etichetta("La tua risposta", testo));
+    const chiudi = document.createElement("input");
+    chiudi.type = "checkbox"; chiudi.checked = x.status !== "closed";
+    const riga = el("label", "", " Chiudi il ticket dopo la risposta");
+    riga.prepend(chiudi);
+    form.appendChild(riga);
+    const err = el("p", "msg err"); err.hidden = true;
+    form.appendChild(err);
+    const { f, ok } = bottoniFondo("Invia la risposta");
+    form.appendChild(f);
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      if (!testo.value.trim()) { err.textContent = "Scrivi una risposta."; err.hidden = false; return; }
+      ok.disabled = true;
+      const corpo = { id: x.id, reply: testo.value.trim() };
+      if (chiudi.checked && x.status !== "closed") corpo.status = "closed";
+      const r = await MiczyAuth.backend("/admin/tickets/update", { metodo: "POST", corpo });
+      if (r.ok) { chiudiScheda(); caricaTicket(); giaCaricate.registro = false; }
+      else { err.textContent = erroreDa(r); err.hidden = false; ok.disabled = false; }
+    });
+    apriScheda(form);
+    testo.focus();
+  }
+
+  async function caricaTicket() {
+    segmenti($("segTk"), [{ id: "open", nome: "Aperti" }, { id: "closed", nome: "Chiusi" }, { id: "all", nome: "Tutti" }], tkFiltro, id => {
+      tkFiltro = id; caricaTicket();
+    });
+    const r = await backendPaziente("/admin/tickets?status=" + tkFiltro);
+    if (!r.ok) { mostraErrore($("erroriTk"), erroreDa(r)); giaCaricate.ticket = false; return; }
+    stato("");
+    mostraErrore($("erroriTk"), "");
+    aggiornaBadgeTicket(r.dati && r.dati.open_count);
+    const box = $("listaTk");
+    box.textContent = "";
+    const lista = (r.dati && r.dati.tickets) || [];
+    if (!lista.length) box.appendChild(el("p", "msg", tkFiltro === "open" ? "Nessun ticket aperto. 🎉" : "Nessun ticket qui."));
+    lista.forEach(x => box.appendChild(disegnaTicket(x)));
+  }
+  caricatori.ticket = caricaTicket;
+  $("aggiornaTk").addEventListener("click", caricaTicket);
+
+  // Il numero di ticket aperti si vede subito sulla scheda, senza aprirla
+  async function badgeTicketIniziale() {
+    const r = await MiczyAuth.backend("/admin/tickets?status=open");
+    if (r.ok && r.dati) aggiornaBadgeTicket(r.dati.open_count);
+  }
+
+  // ===========================================================================
   // Registro
   // ===========================================================================
   const NOMI_AZIONI = {
     ban: "Sospensione", unban: "Riattivazione", limit: "Limite utente", delete_user: "Account eliminato",
     "settings:maintenance": "Manutenzione", "settings:banner": "Avviso", "settings:limits": "Limiti del sito",
     "settings:personality": "Personalità",
-    deletion_approved: "Eliminazione approvata", deletion_rejected: "Eliminazione rifiutata",
+    ticket: "Ticket", deletion_approved: "Eliminazione approvata", deletion_rejected: "Eliminazione rifiutata",
   };
 
   async function caricaRegistro() {
@@ -1098,6 +1197,7 @@
     $("pannello").hidden = false;
     stato("Caricamento…");
     apriTab("panoramica");
+    badgeTicketIniziale();
     giaCaricate.richieste = true;
     caricaRichieste();   // per il numero sul distintivo della scheda
   }

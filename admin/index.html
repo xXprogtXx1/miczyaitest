@@ -182,6 +182,7 @@
             <button class="tab" role="tab" id="tab-messaggi" aria-controls="sez-messaggi" aria-selected="false" data-tab="messaggi">🔎 Messaggi</button>
             <button class="tab" role="tab" id="tab-feedback" aria-controls="sez-feedback" aria-selected="false" data-tab="feedback">👍 Feedback</button>
             <button class="tab" role="tab" id="tab-richieste" aria-controls="sez-richieste" aria-selected="false" data-tab="richieste">🗑️ Richieste <span class="badge" id="badgeRic" hidden></span></button>
+            <button class="tab" role="tab" id="tab-ticket" aria-controls="sez-ticket" aria-selected="false" data-tab="ticket">🎫 Ticket <span class="badge" id="badgeTk" hidden></span></button>
             <button class="tab" role="tab" id="tab-sito" aria-controls="sez-sito" aria-selected="false" data-tab="sito">⚙️ Sito</button>
             <button class="tab" role="tab" id="tab-registro" aria-controls="sez-registro" aria-selected="false" data-tab="registro">📜 Registro</button>
           </div>
@@ -318,6 +319,17 @@
             <div id="listaRic"></div>
             <div class="titolo-sez"><h2>Già gestite</h2></div>
             <div id="listaRicChiuse"></div>
+          </section>
+
+          <!-- TICKET DI ASSISTENZA -->
+          <section class="pannello-tab" id="sez-ticket" role="tabpanel" aria-labelledby="tab-ticket" hidden>
+            <div class="titolo-sez">
+              <h2>Richieste di assistenza</h2>
+              <button class="btn" type="button" id="aggiornaTk">↻ Aggiorna</button>
+            </div>
+            <div class="seg" id="segTk" role="group" aria-label="Filtro ticket" style="margin-bottom:.7rem"></div>
+            <div id="erroriTk" class="msg err" hidden></div>
+            <div id="listaTk"></div>
           </section>
 
           <!-- SITO -->
